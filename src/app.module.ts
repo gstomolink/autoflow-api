@@ -8,11 +8,13 @@ import { AppService } from './app.service';
 import appConfig from './config/app.config';
 import { envValidationSchema } from './config/env.validation';
 import { UserEntity } from './users/entities/user.entity';
+import { UsersModule } from './users/users.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
+      envFilePath: ['.env'],
       load: [appConfig],
       validationSchema: envValidationSchema,
       validationOptions: {
@@ -45,6 +47,7 @@ import { UserEntity } from './users/entities/user.entity';
           : undefined,
       }),
     }),
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [
