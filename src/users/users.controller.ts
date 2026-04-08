@@ -54,6 +54,11 @@ export class UsersController {
       throw new BadRequestException('x-actor-role must be a number');
     }
 
-    return this.usersService.create(createUserDto, actorRole, actorId);
+    const parsedActorId = actorId ? Number(actorId) : undefined;
+    if (actorId && !Number.isInteger(parsedActorId)) {
+      throw new BadRequestException('x-actor-id must be a number');
+    }
+
+    return this.usersService.create(createUserDto, actorRole, parsedActorId);
   }
 }

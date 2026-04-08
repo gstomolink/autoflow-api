@@ -2,20 +2,26 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UserResponseDto {
   @ApiProperty()
-  id!: string;
+  id!: number;
 
   @ApiProperty()
   fullName!: string;
 
   @ApiProperty()
-  email!: string;
+  userId!: string;
+
+  @ApiPropertyOptional()
+  email!: string | null;
 
   @ApiProperty({ example: 2 })
   role!: number;
+
+  @ApiPropertyOptional()
+  shopId!: string | null;
 
   @ApiPropertyOptional({ enum: ['cashier', 'inventory_staff'] })
   staffType!: string | null;
 
   @ApiPropertyOptional()
-  createdByStoreAdminId!: string | null;
+  createdByStoreAdminId!: number | null;
 }

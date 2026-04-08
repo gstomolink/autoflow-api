@@ -17,16 +17,22 @@ import type {
 } from '../../constants/roles.constant';
 
 @Entity({ name: 'users' })
+@Index(['shopId', 'userId'], { unique: true })
 export class UserEntity {
-  @PrimaryGeneratedColumn('uuid')
-  id!: string;
+  @PrimaryGeneratedColumn({
+    type: 'int',
+    unsigned: true,
+  })
+  id!: number;
 
   @Column({ length: 120 })
   fullName!: string;
 
-  @Index({ unique: true })
-  @Column({ length: 180 })
-  email!: string;
+  @Column({ length: 64 })
+  userId!: string;
+
+  @Column({ type: 'varchar', length: 180, nullable: true })
+  email!: string | null;
 
   @Column({ length: 255 })
   passwordHash!: string;
@@ -39,16 +45,24 @@ export class UserEntity {
 
   @Column({
     type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  shopId!: string | null;
+
+  @Column({
+    type: 'varchar',
     length: 32,
     nullable: true,
   })
   staffType!: StoreStaffTypeValue | null;
 
   @Column({
-    type: 'uuid',
+    type: 'int',
+    unsigned: true,
     nullable: true,
   })
-  createdByStoreAdminId!: string | null;
+  createdByStoreAdminId!: number | null;
 
   @ManyToOne(() => UserEntity, (user) => user.createdStaffMembers, {
     nullable: true,

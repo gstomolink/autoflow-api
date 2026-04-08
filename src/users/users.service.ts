@@ -1,4 +1,4 @@
-import { createHash } from 'crypto';
+import { hash } from 'bcryptjs';
 import {
   BadRequestException,
   ConflictException,
@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Repository } from 'typeorm';
 import { STORE_STAFF_TYPES, USER_ROLES } from '../constants/roles.constant';
 import { CreateUserDto } from './dto/create-user.dto';
 import {
@@ -27,8 +27,10 @@ export class UsersService {
       select: {
         id: true,
         fullName: true,
+        userId: true,
         email: true,
         role: true,
+        shopId: true,
         staffType: true,
         createdByStoreAdminId: true,
       },
@@ -36,18 +38,62 @@ export class UsersService {
     });
   }
 
-  async create(createUserDto: CreateUserDto, actorRole: number, actorId?: string) {
+  async create(createUserDto: CreateUserDto, actorRole: number, actorId?: number) {
     const allowedRoles = roleCreationRules[actorRole as 1 | 2 | 3] ?? [];
     if (!allowedRoles.includes(createUserDto.role as 1 | 2 | 3)) {
       throw new BadRequestException('this role cannot create target role');
     }
 
-    const existing = await this.usersRepository.findOne({
-      where: { email: createUserDto.email.toLowerCase() },
-      select: { id: true },
-    });
-    if (existing) {
-      throw new ConflictException('email already exists');
+    const normalizedUserId = createUserDto.userId.trim().toLowerCase();
+    const normalizedShopId = createUserDto.shopId?.trim() || null;
+    const normalizedEmail = createUserDto.email?.toLowerCase() ?? null;
+
+    if (createUserDto.role === USER_ROLES.SUPER_ADMIN && normalizedShopId) {
+      throw new BadRequestException('super admin must not have shop id');
+    }
+
+    if (createUserDto.role !== USER_ROLES.SUPER_ADMIN && !normalizedShopId) {
+      throw new BadRequestException('shop id is required for store users');
+    }
+
+    if (createUserDto.role === USER_ROLES.SUPER_ADMIN) {
+      const superAdminUserIdExists = await this.usersRepository.findOne({
+        where: {
+          userId: normalizedUserId,
+          role: USER_ROLES.SUPER_ADMIN,
+          shopId: IsNull(),
+        },
+        select: { id: true },
+      });
+      if (superAdminUserIdExists) {
+        throw new ConflictException('super admin user id already exists');
+      }
+    } else {
+      const shopScopedUserIdExists = await this.usersRepository.findOne({
+        where: normalizedShopId
+          ? {
+              userId: normalizedUserId,
+              shopId: normalizedShopId,
+            }
+          : {
+              userId: normalizedUserId,
+              shopId: IsNull(),
+            },
+        select: { id: true },
+      });
+      if (shopScopedUserIdExists) {
+        throw new ConflictException('user id already exists for this shop');
+      }
+    }
+
+    if (normalizedEmail) {
+      const existingEmail = await this.usersRepository.findOne({
+        where: { email: normalizedEmail },
+        select: { id: true },
+      });
+      if (existingEmail) {
+        throw new ConflictException('email already exists');
+      }
     }
 
     const normalizedStaffType = createUserDto.staffType?.toLowerCase();
@@ -62,7 +108,7 @@ export class UsersService {
       }
     }
 
-    let createdByStoreAdminId: string | null = null;
+    let createdByStoreAdminId: number | null = null;
     if (actorRole === USER_ROLES.STORE_ADMIN) {
       createdByStoreAdminId = actorId ?? null;
       if (!createdByStoreAdminId) {
@@ -79,16 +125,16 @@ export class UsersService {
       createdByStoreAdminId = createUserDto.createdByStoreAdminId;
     }
 
-    const passwordHash = createHash('sha256')
-      .update(createUserDto.password)
-      .digest('hex');
+    const passwordHash = await hash(createUserDto.password, 12);
 
     const saved = await this.usersRepository.save(
       this.usersRepository.create({
         fullName: createUserDto.fullName,
-        email: createUserDto.email.toLowerCase(),
+        userId: normalizedUserId,
+        email: normalizedEmail,
         passwordHash,
         role: createUserDto.role as 1 | 2 | 3,
+        shopId: normalizedShopId,
         staffType:
           createUserDto.role === USER_ROLES.STORE_STAFF
             ? (normalizedStaffType as
@@ -105,11 +151,44 @@ export class UsersService {
       select: {
         id: true,
         fullName: true,
+        userId: true,
         email: true,
         role: true,
+        shopId: true,
         staffType: true,
         createdByStoreAdminId: true,
       },
     });
+  }
+
+  async seedInitialSuperAdmin(): Promise<void> {
+    const seedUserId = 'admin';
+    const seedPassword = 'admin';
+
+    const superAdmin = await this.usersRepository.findOne({
+      where: {
+        role: USER_ROLES.SUPER_ADMIN,
+        userId: seedUserId,
+        shopId: IsNull(),
+      },
+      select: { id: true },
+    });
+    if (superAdmin) {
+      return;
+    }
+
+    const passwordHash = await hash(seedPassword, 12);
+    await this.usersRepository.save(
+      this.usersRepository.create({
+        fullName: 'System Super Admin',
+        userId: seedUserId,
+        email: null,
+        passwordHash,
+        role: USER_ROLES.SUPER_ADMIN,
+        shopId: null,
+        staffType: null,
+        createdByStoreAdminId: null,
+      }),
+    );
   }
 }

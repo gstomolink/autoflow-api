@@ -8,9 +8,15 @@ export class CreateUserDto {
   @Length(2, 120)
   fullName!: string;
 
-  @ApiProperty({ example: 'admin@store.com' })
+  @ApiProperty({ example: 'admin' })
+  @IsString()
+  @Length(3, 64)
+  userId!: string;
+
+  @ApiPropertyOptional({ example: 'admin@store.com' })
+  @IsOptional()
   @IsEmail()
-  email!: string;
+  email?: string;
 
   @ApiProperty({ example: 'SecurePass123!' })
   @IsString()
@@ -26,6 +32,15 @@ export class CreateUserDto {
   @Min(1)
   role!: number;
 
+  @ApiPropertyOptional({
+    description: 'required for store admin and store staff users',
+    example: 'shop-001',
+  })
+  @IsOptional()
+  @IsString()
+  @Length(2, 64)
+  shopId?: string;
+
   @ApiPropertyOptional({ example: 'cashier', enum: ['cashier', 'inventory_staff'] })
   @IsOptional()
   @IsString()
@@ -33,9 +48,11 @@ export class CreateUserDto {
 
   @ApiPropertyOptional({
     description: 'required when creator is store admin and role is store staff',
-    example: 'd89e6a9e-3075-4ec4-b7f9-7f7d05e3d0f4',
+    example: 2,
   })
   @IsOptional()
-  @IsString()
-  createdByStoreAdminId?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  createdByStoreAdminId?: number;
 }

@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
+import { UsersService } from './users/users.service';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,7 +22,7 @@ async function bootstrap() {
 
   app.enableCors({
     origin: configService.get<string>('app.corsOrigin', '*'),
-    credentials: true,
+    credentials: configService.get<string>('app.corsOrigin', '*') !== '*',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   });
 
@@ -37,6 +38,9 @@ async function bootstrap() {
       persistAuthorization: true,
     },
   });
+
+  const usersService = app.get(UsersService);
+  await usersService.seedInitialSuperAdmin();
 
   await app.listen(configService.get<number>('app.port', 3000));
 }

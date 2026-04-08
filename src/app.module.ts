@@ -5,6 +5,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { AuthModule } from './auth/auth.module';
 import appConfig from './config/app.config';
 import { envValidationSchema } from './config/env.validation';
 import { UserEntity } from './users/entities/user.entity';
@@ -47,6 +48,7 @@ import { UsersModule } from './users/users.module';
           : undefined,
       }),
     }),
+    AuthModule,
     UsersModule,
   ],
   controllers: [AppController],

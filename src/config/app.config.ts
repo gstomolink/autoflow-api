@@ -5,6 +5,8 @@ export default () => ({
     corsOrigin: process.env.CORS_ORIGIN ?? '*',
     throttleTtl: parseInt(process.env.THROTTLE_TTL ?? '60000', 10),
     throttleLimit: parseInt(process.env.THROTTLE_LIMIT ?? '120', 10),
+    jwtSecret: process.env.JWT_SECRET,
+    jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '1d',
   },
   database: {
     host: process.env.DB_HOST ?? 'localhost',
