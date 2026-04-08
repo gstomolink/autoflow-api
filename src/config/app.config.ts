@@ -1,6 +1,6 @@
 export default () => ({
   app: {
-    port: parseInt(process.env.PORT ?? '3000', 10),
+    port: parseInt(process.env.PORT ?? '10010', 10),
     nodeEnv: process.env.NODE_ENV ?? 'development',
     corsOrigin: process.env.CORS_ORIGIN ?? '*',
     throttleTtl: parseInt(process.env.THROTTLE_TTL ?? '60000', 10),
