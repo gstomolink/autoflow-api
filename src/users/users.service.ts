@@ -2,12 +2,14 @@ import { hash } from 'bcryptjs';
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { STORE_STAFF_TYPES, USER_ROLES } from '../constants/roles.constant';
+import type { JwtPayload } from '../auth/jwt-payload';
 import { CreateUserDto } from './dto/create-user.dto';
 import {
   roleCreationRules,
@@ -29,6 +31,7 @@ export class UsersService {
         fullName: true,
         userId: true,
         email: true,
+        phone: true,
         role: true,
         shopId: true,
         staffType: true,
@@ -36,6 +39,42 @@ export class UsersService {
       },
       order: { fullName: 'ASC' },
     });
+  }
+
+  async findAllForActor(
+    actor: JwtPayload,
+    queryShopId?: string,
+  ): Promise<UserEntity[]> {
+    if (actor.role === USER_ROLES.STORE_STAFF) {
+      throw new ForbiddenException();
+    }
+    const qb = this.usersRepository
+      .createQueryBuilder('u')
+      .select([
+        'u.id',
+        'u.fullName',
+        'u.userId',
+        'u.email',
+        'u.phone',
+        'u.role',
+        'u.shopId',
+        'u.staffType',
+        'u.createdByStoreAdminId',
+      ])
+      .orderBy('u.fullName', 'ASC');
+    if (actor.role === USER_ROLES.SUPER_ADMIN) {
+      const sid = queryShopId?.trim();
+      if (!sid) {
+        throw new BadRequestException('shop id is required');
+      }
+      qb.andWhere('u.shopId = :sid', { sid });
+      return qb.getMany();
+    }
+    if (actor.role === USER_ROLES.STORE_ADMIN && actor.shopId) {
+      qb.andWhere('u.shopId = :sid', { sid: actor.shopId });
+      return qb.getMany();
+    }
+    throw new ForbiddenException();
   }
 
   async create(createUserDto: CreateUserDto, actorRole: number, actorId?: number) {
@@ -127,11 +166,14 @@ export class UsersService {
 
     const passwordHash = await hash(createUserDto.password, 12);
 
+    const normalizedPhone = createUserDto.phone?.trim() || null;
+
     const saved = await this.usersRepository.save(
       this.usersRepository.create({
         fullName: createUserDto.fullName,
         userId: normalizedUserId,
         email: normalizedEmail,
+        phone: normalizedPhone,
         passwordHash,
         role: createUserDto.role as 1 | 2 | 3,
         shopId: normalizedShopId,
@@ -153,6 +195,7 @@ export class UsersService {
         fullName: true,
         userId: true,
         email: true,
+        phone: true,
         role: true,
         shopId: true,
         staffType: true,

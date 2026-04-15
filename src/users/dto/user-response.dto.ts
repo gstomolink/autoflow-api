@@ -13,6 +13,9 @@ export class UserResponseDto {
   @ApiPropertyOptional()
   email!: string | null;
 
+  @ApiPropertyOptional()
+  phone!: string | null;
+
   @ApiProperty({ example: 2 })
   role!: number;
 

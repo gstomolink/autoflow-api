@@ -34,6 +34,9 @@ export class UserEntity {
   @Column({ type: 'varchar', length: 180, nullable: true })
   email!: string | null;
 
+  @Column({ type: 'varchar', length: 32, nullable: true })
+  phone!: string | null;
+
   @Column({ length: 255 })
   passwordHash!: string;
 

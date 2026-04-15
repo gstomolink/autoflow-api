@@ -18,6 +18,12 @@ export class CreateUserDto {
   @IsEmail()
   email?: string;
 
+  @ApiPropertyOptional({ example: '0771234567' })
+  @IsOptional()
+  @IsString()
+  @Length(0, 32)
+  phone?: string;
+
   @ApiProperty({ example: 'SecurePass123!' })
   @IsString()
   @Length(8, 128)

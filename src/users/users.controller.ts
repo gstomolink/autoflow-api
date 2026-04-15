@@ -1,12 +1,6 @@
+import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
 import {
-  Body,
-  BadRequestException,
-  Controller,
-  Get,
-  Headers,
-  Post,
-} from '@nestjs/common';
-import {
+  ApiBearerAuth,
   ApiBody,
   ApiCreatedResponse,
   ApiHeader,
@@ -14,6 +8,12 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
+import { USER_ROLES } from '../constants/roles.constant';
+import type { JwtPayload } from '../auth/jwt-payload';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UsersService } from './users.service';
@@ -24,41 +24,26 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List users' })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLES.SUPER_ADMIN, USER_ROLES.STORE_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List users (super admin or store admin)' })
   @ApiOkResponse({ type: UserResponseDto, isArray: true })
-  findAll() {
-    return this.usersService.findAll();
+  findAll(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId?: string,
+  ) {
+    return this.usersService.findAllForActor(user, shopId);
   }
 
   @Post()
-  @ApiOperation({ summary: 'Create user with role hierarchy checks' })
-  @ApiHeader({
-    name: 'x-actor-role',
-    description: 'creator role id (1=super admin, 2=store admin)',
-    required: true,
-  })
-  @ApiHeader({
-    name: 'x-actor-id',
-    description: 'required for store admin creator',
-    required: false,
-  })
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLES.SUPER_ADMIN, USER_ROLES.STORE_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create user with role hierarchy' })
   @ApiBody({ type: CreateUserDto })
   @ApiCreatedResponse({ type: UserResponseDto })
-  create(
-    @Body() createUserDto: CreateUserDto,
-    @Headers('x-actor-role') actorRoleHeader: string,
-    @Headers('x-actor-id') actorId?: string,
-  ) {
-    const actorRole = Number(actorRoleHeader);
-    if (!Number.isInteger(actorRole)) {
-      throw new BadRequestException('x-actor-role must be a number');
-    }
-
-    const parsedActorId = actorId ? Number(actorId) : undefined;
-    if (actorId && !Number.isInteger(parsedActorId)) {
-      throw new BadRequestException('x-actor-id must be a number');
-    }
-
-    return this.usersService.create(createUserDto, actorRole, parsedActorId);
+  create(@CurrentUser() user: JwtPayload, @Body() createUserDto: CreateUserDto) {
+    return this.usersService.create(createUserDto, user.role, user.sub);
   }
 }
