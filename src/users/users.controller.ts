@@ -15,6 +15,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import { UserResponseDto } from './dto/user-response.dto';
 import { UsersService } from './users.service';
 
@@ -45,5 +46,16 @@ export class UsersController {
   @ApiCreatedResponse({ type: UserResponseDto })
   create(@CurrentUser() user: JwtPayload, @Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto, user.role, user.sub);
+  }
+
+  @Post('reset-password')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLES.SUPER_ADMIN, USER_ROLES.STORE_ADMIN)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reset user password' })
+  @ApiBody({ type: ResetPasswordDto })
+  @ApiOkResponse({ description: 'Password reset successful' })
+  resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.usersService.resetPassword(resetPasswordDto);
   }
 }

@@ -1,4 +1,4 @@
-import { hash } from 'bcryptjs';
+import { compare, hash } from 'bcryptjs';
 import {
   BadRequestException,
   ConflictException,
@@ -11,6 +11,7 @@ import { IsNull, Repository } from 'typeorm';
 import { STORE_STAFF_TYPES, USER_ROLES } from '../constants/roles.constant';
 import type { JwtPayload } from '../auth/jwt-payload';
 import { CreateUserDto } from './dto/create-user.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 import {
   roleCreationRules,
   UserEntity,
@@ -233,5 +234,25 @@ export class UsersService {
         createdByStoreAdminId: null,
       }),
     );
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<{ message: string }> {
+    const user = await this.usersRepository.findOne({
+      where: { id: dto.userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    const isMatch = await compare(dto.currentPassword, user.passwordHash);
+    if (!isMatch) {
+      throw new BadRequestException('Current password is incorrect');
+    }
+
+    user.passwordHash = await hash(dto.newPassword, 12);
+    await this.usersRepository.save(user);
+
+    return { message: 'Password updated successfully' };
   }
 }
