@@ -7,7 +7,7 @@ export class UserResponseDto {
   @ApiProperty()
   fullName!: string;
 
-  @ApiProperty()
+  @ApiProperty() 
   userId!: string;
 
   @ApiPropertyOptional()
