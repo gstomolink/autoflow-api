@@ -1,7 +1,9 @@
-import { Body, Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseGuards, UseInterceptors, UploadedFile } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
   ApiBody,
+  ApiConsumes,
   ApiCreatedResponse,
   ApiHeader,
   ApiOkResponse,
@@ -46,6 +48,31 @@ export class UsersController {
   @ApiCreatedResponse({ type: UserResponseDto })
   create(@CurrentUser() user: JwtPayload, @Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto, user.role, user.sub);
+  }
+
+  @Post('bulk-upload')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(USER_ROLES.SUPER_ADMIN, USER_ROLES.STORE_ADMIN)
+  @ApiBearerAuth()
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Bulk create users from CSV' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  bulkCreate(
+    @CurrentUser() user: JwtPayload,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.usersService.bulkCreate(file, user.role, user.sub);
   }
 
   @Post('reset-password')

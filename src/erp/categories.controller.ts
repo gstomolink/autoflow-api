@@ -9,9 +9,14 @@ import {
   Post,
   Query,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
@@ -50,6 +55,28 @@ export class CategoriesController {
     @Body() dto: CreateCategoryDto,
   ) {
     return this.categoriesService.create(resolveShopId(user, shopId), dto);
+  }
+
+  @Post('bulk-upload')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+        },
+      },
+    },
+  })
+  bulkCreate(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId: string | undefined,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.categoriesService.bulkCreate(resolveShopId(user, shopId), file);
   }
 
   @Patch(':id')

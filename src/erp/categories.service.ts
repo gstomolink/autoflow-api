@@ -5,6 +5,8 @@ import { CategoryEntity } from '../inventory/entities/category.entity';
 import { ProductEntity } from '../inventory/entities/product.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
+import { Readable } from 'stream';
+import csvParser from 'csv-parser';
 
 @Injectable()
 export class CategoriesService {
@@ -65,5 +67,40 @@ export class CategoriesService {
       throw new NotFoundException();
     }
     await this.categoriesRepository.remove(row);
+  }
+
+  async bulkCreate(shopId: string, file: Express.Multer.File) {
+    const results: any[] = [];
+    return new Promise((resolve, reject) => {
+      Readable.from(file.buffer)
+        .pipe(csvParser())
+        .on('data', (data) => results.push(data))
+        .on('end', async () => {
+          let successCount = 0;
+          for (const row of results) {
+            // "Category Name", "Description" are standard from the frontend sample
+            // Note: csv-parser parses headers verbatim unless configured otherwise
+            // Frontend sample headers: "Category ID", "Category Name", "Description", "Status"
+            const name = row['Category Name'] || row['name'] || row['Name'];
+            const description = row['Description'] || row['description'];
+
+            if (!name) continue; // skip invalid rows
+
+            try {
+              const newCategory = this.categoriesRepository.create({
+                shopId,
+                name: name.trim(),
+                description: description?.trim() ?? null,
+              });
+              await this.categoriesRepository.save(newCategory);
+              successCount++;
+            } catch (err) {
+              console.error('Failed to import row', row, err);
+            }
+          }
+          resolve({ successCount });
+        })
+        .on('error', (error) => reject(error));
+    });
   }
 }
