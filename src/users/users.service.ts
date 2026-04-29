@@ -1,4 +1,6 @@
 import { compare, hash } from 'bcryptjs';
+import { Readable } from 'stream';
+import csvParser from 'csv-parser';
 import {
   BadRequestException,
   ConflictException,
@@ -254,5 +256,53 @@ export class UsersService {
     await this.usersRepository.save(user);
 
     return { message: 'Password updated successfully' };
+  }
+
+  async bulkCreate(
+    file: Express.Multer.File,
+    actorRole: number,
+    actorId?: number,
+  ) {
+    const results: any[] = [];
+    return new Promise((resolve, reject) => {
+      Readable.from(file.buffer)
+        .pipe(csvParser())
+        .on('data', (data) => results.push(data))
+        .on('end', async () => {
+          let successCount = 0;
+          for (const row of results) {
+            // Frontend sample headers: "fullName", "userId", "email", "phone", "password", "role", "shopId", "staffType"
+            const fullName = row.fullName || row.FullName;
+            const userId = row.userId || row.UserId || row.userid;
+            const password = row.password || row.Password;
+            const role = parseInt(row.role || row.Role, 10);
+            const shopId = row.shopId || row.ShopId;
+
+            if (!fullName || !userId || !password || isNaN(role)) {
+              continue;
+            }
+
+            const dto: CreateUserDto = {
+              fullName,
+              userId,
+              password,
+              role,
+              shopId: shopId || undefined,
+              email: row.email || row.Email || undefined,
+              phone: row.phone || row.Phone || undefined,
+              staffType: row.staffType || row.StaffType || undefined,
+            };
+
+            try {
+              await this.create(dto, actorRole, actorId);
+              successCount++;
+            } catch (err) {
+              console.error('Failed to import user row', row.userId, err);
+            }
+          }
+          resolve({ successCount });
+        })
+        .on('error', (error) => reject(error));
+    });
   }
 }
