@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  ParseIntPipe,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { USER_ROLES } from '../constants/roles.constant';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -24,7 +32,7 @@ export class SuggestionsController {
 
   @Post('run-ai')
   runAi(@CurrentUser() user: JwtPayload, @Query('shopId') shopId?: string) {
-    return this.suggestionsService.runReplenishment(resolveShopId(user, shopId));
+    return this.suggestionsService.runAi(resolveShopId(user, shopId));
   }
 
   @Post('run-replenishment')
@@ -32,6 +40,20 @@ export class SuggestionsController {
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId?: string,
   ) {
-    return this.suggestionsService.runReplenishment(resolveShopId(user, shopId));
+    return this.suggestionsService.runReplenishment(
+      resolveShopId(user, shopId),
+    );
+  }
+
+  @Post(':id/create-order')
+  createOrder(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId?: string,
+  ) {
+    return this.suggestionsService.createOrderFromSuggestion(
+      resolveShopId(user, shopId),
+      id,
+    );
   }
 }

@@ -17,7 +17,7 @@ export class ReplenishmentCronService {
     const shopIds = await this.shopsService.allShopIds();
     for (const shopId of shopIds) {
       try {
-        await this.suggestionsService.runReplenishment(shopId);
+        await this.suggestionsService.runAi(shopId);
       } catch (e) {
         this.logger.warn(
           `replenishment failed for ${shopId}: ${e instanceof Error ? e.message : e}`,

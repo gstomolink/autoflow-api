@@ -38,18 +38,17 @@ export class CategoriesService {
     return withCount;
   }
 
-  async create(shopId: string, dto: CreateCategoryDto) {
+  async create(dto: CreateCategoryDto) {
     const row = this.categoriesRepository.create({
-      shopId,
       name: dto.name.trim(),
       description: dto.description?.trim() ?? null,
     });
     return this.categoriesRepository.save(row);
   }
 
-  async update(shopId: string, id: number, dto: UpdateCategoryDto) {
+  async update(id: number, dto: UpdateCategoryDto) {
     const row = await this.categoriesRepository.findOne({
-      where: { id, shopId },
+      where: { id },
     });
     if (!row) {
       throw new NotFoundException();
@@ -61,9 +60,9 @@ export class CategoriesService {
     return this.categoriesRepository.save(row);
   }
 
-  async remove(shopId: string, id: number) {
+  async remove(id: number) {
     const row = await this.categoriesRepository.findOne({
-      where: { id, shopId },
+      where: { id },
     });
     if (!row) {
       throw new NotFoundException();
@@ -71,7 +70,7 @@ export class CategoriesService {
     await this.categoriesRepository.remove(row);
   }
 
-  async bulkCreate(shopId: string, file: Express.Multer.File) {
+  async bulkCreate(file: Express.Multer.File) {
     const results: any[] = [];
     return new Promise((resolve, reject) => {
       Readable.from(file.buffer)
@@ -90,7 +89,6 @@ export class CategoriesService {
 
             try {
               const newCategory = this.categoriesRepository.create({
-                shopId,
                 name: name.trim(),
                 description: description?.trim() ?? null,
               });

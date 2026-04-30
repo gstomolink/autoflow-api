@@ -5,6 +5,7 @@ import {
   Get,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -19,6 +20,7 @@ import { resolveShopId } from '../common/shop-scope';
 import type { JwtPayload } from '../auth/jwt-payload';
 import { InventoryOrdersService } from './inventory-orders.service';
 import { CreateInventoryOrderDto } from './dto/create-inventory-order.dto';
+import { UpdateInventoryOrderDto } from './dto/update-inventory-order.dto';
 
 @ApiTags('inventory-orders')
 @ApiBearerAuth()
@@ -60,6 +62,20 @@ export class InventoryOrdersController {
   ) {
     return this.inventoryOrdersService.createManual(
       resolveShopId(user, shopId),
+      dto,
+    );
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId: string | undefined,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateInventoryOrderDto,
+  ) {
+    return this.inventoryOrdersService.updateManual(
+      resolveShopId(user, shopId),
+      id,
       dto,
     );
   }

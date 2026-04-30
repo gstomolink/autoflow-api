@@ -7,7 +7,6 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Query,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -49,12 +48,8 @@ export class CategoriesController {
   }
 
   @Post()
-  create(
-    @CurrentUser() user: JwtPayload,
-    @Query('shopId') shopId: string | undefined,
-    @Body() dto: CreateCategoryDto,
-  ) {
-    return this.categoriesService.create(resolveShopId(user, shopId), dto);
+  create(@Body() dto: CreateCategoryDto) {
+    return this.categoriesService.create(dto);
   }
 
   @Post('bulk-upload')
@@ -71,34 +66,17 @@ export class CategoriesController {
       },
     },
   })
-  bulkCreate(
-    @CurrentUser() user: JwtPayload,
-    @Query('shopId') shopId: string | undefined,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    return this.categoriesService.bulkCreate(resolveShopId(user, shopId), file);
+  bulkCreate(@UploadedFile() file: Express.Multer.File) {
+    return this.categoriesService.bulkCreate(file);
   }
 
   @Patch(':id')
-  update(
-    @CurrentUser() user: JwtPayload,
-    @Query('shopId') shopId: string | undefined,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateCategoryDto,
-  ) {
-    return this.categoriesService.update(
-      resolveShopId(user, shopId),
-      id,
-      dto,
-    );
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCategoryDto) {
+    return this.categoriesService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(
-    @CurrentUser() user: JwtPayload,
-    @Query('shopId') shopId: string | undefined,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
-    return this.categoriesService.remove(resolveShopId(user, shopId), id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.categoriesService.remove(id);
   }
 }
