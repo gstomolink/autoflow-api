@@ -5,6 +5,8 @@ import { InventoryStockEntity } from '../inventory/entities/inventory-stock.enti
 import { ProductEntity } from '../inventory/entities/product.entity';
 import { WarehouseEntity } from '../inventory/entities/warehouse.entity';
 
+const SHOP_INVENTORY_CODE = 'SHOP-STOCK';
+
 @Injectable()
 export class StockService {
   constructor(
@@ -29,7 +31,7 @@ export class StockService {
       where: { warehouseId: In(whIds) },
       relations: ['warehouse', 'product'],
     });
-    const scoped = rows.filter((r) => r.product?.shopId === shopId);
+    const scoped = rows.filter((r) => r.warehouse?.shopId === shopId);
     return scoped.map((r) => ({
       id: r.id,
       productName: r.product?.name ?? '',
@@ -47,21 +49,44 @@ export class StockService {
 
   async ensureRow(
     shopId: string,
-    warehouseId: number,
+    warehouseId: number | undefined,
     productId: number,
   ): Promise<InventoryStockEntity> {
-    await this.warehousesRepository.findOneOrFail({
-      where: { id: warehouseId, shopId },
-    });
+    let targetWarehouseId = warehouseId;
+    if (targetWarehouseId === undefined) {
+      const existingDefault = await this.warehousesRepository.findOne({
+        where: { shopId, code: SHOP_INVENTORY_CODE },
+        select: { id: true },
+      });
+      if (existingDefault) {
+        targetWarehouseId = existingDefault.id;
+      } else {
+        const createdDefault = await this.warehousesRepository.save(
+          this.warehousesRepository.create({
+            shopId,
+            code: SHOP_INVENTORY_CODE,
+            name: 'Shop Inventory',
+            address: null,
+            managerName: null,
+            contactPhone: null,
+          }),
+        );
+        targetWarehouseId = createdDefault.id;
+      }
+    } else {
+      await this.warehousesRepository.findOneOrFail({
+        where: { id: targetWarehouseId, shopId },
+      });
+    }
     await this.productsRepository.findOneOrFail({
-      where: { id: productId, shopId },
+      where: { id: productId },
     });
     let row = await this.stockRepository.findOne({
-      where: { warehouseId, productId },
+      where: { warehouseId: targetWarehouseId, productId },
     });
     if (!row) {
       row = this.stockRepository.create({
-        warehouseId,
+        warehouseId: targetWarehouseId,
         productId,
         quantityOnHand: 0,
         reservedQuantity: 0,
@@ -80,11 +105,7 @@ export class StockService {
       where: { id: stockId },
       relations: ['warehouse', 'product'],
     });
-    if (
-      !row ||
-      row.warehouse?.shopId !== shopId ||
-      row.product?.shopId !== shopId
-    ) {
+    if (!row || row.warehouse?.shopId !== shopId) {
       throw new NotFoundException();
     }
     row.quantityOnHand = Math.max(0, row.quantityOnHand + delta);

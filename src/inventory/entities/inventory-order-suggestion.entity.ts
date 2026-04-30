@@ -8,6 +8,12 @@ import {
 import { ProductEntity } from './product.entity';
 import { SupplierEntity } from './supplier.entity';
 
+export type InventorySuggestionUrgencyStatus =
+  | 'on_track'
+  | 'next_week'
+  | 'urgent'
+  | 'order_passed';
+
 @Entity({ name: 'inventory_order_suggestions' })
 export class InventoryOrderSuggestionEntity {
   @PrimaryGeneratedColumn({ type: 'int', unsigned: true })
@@ -65,4 +71,22 @@ export class InventoryOrderSuggestionEntity {
 
   @Column({ type: 'decimal', precision: 14, scale: 4, nullable: true })
   dailyUsageRate!: string | null;
+
+  @Column({ type: 'int', unsigned: true, nullable: true })
+  maxOrderToDeliveryDays!: number | null;
+
+  @Column({ type: 'decimal', precision: 14, scale: 4, nullable: true })
+  daysUntilStockout!: string | null;
+
+  @Column({ type: 'varchar', length: 24, nullable: true })
+  urgencyStatus!: InventorySuggestionUrgencyStatus | null;
+
+  @Column({ type: 'date', nullable: true })
+  recommendedOrderDate!: Date | null;
+
+  @Column({ type: 'decimal', precision: 5, scale: 2, nullable: true })
+  aiConfidence!: string | null;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  aiReason!: string | null;
 }

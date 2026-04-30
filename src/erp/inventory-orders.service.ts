@@ -56,17 +56,17 @@ export class InventoryOrdersService {
 
   async createManual(shopId: string, dto: CreateInventoryOrderDto) {
     const supplier = await this.suppliersRepository.findOne({
-      where: { id: dto.supplierId, shopId },
+      where: { id: dto.supplierId },
     });
     if (!supplier) {
       throw new NotFoundException('supplier not found');
     }
     for (const line of dto.lines) {
       const p = await this.productsRepository.findOne({
-        where: { id: line.productId, shopId },
+        where: { id: line.productId },
       });
       if (!p) {
-        throw new BadRequestException(`product ${line.productId} not in shop`);
+        throw new BadRequestException(`product ${line.productId} not found`);
       }
     }
     const orderNumber = `IO-${Date.now()}`;
@@ -88,7 +88,7 @@ export class InventoryOrdersService {
       );
       for (const l of dto.lines) {
         await m.getRepository(ProductEntity).findOneOrFail({
-          where: { id: l.productId, shopId },
+          where: { id: l.productId },
         });
         await lineRepo.save(
           lineRepo.create({

@@ -49,7 +49,7 @@ export class CustomerOrdersService {
       [];
     for (const l of dto.lines) {
       const p = await this.productsRepository.findOne({
-        where: { id: l.productId, shopId },
+        where: { id: l.productId },
       });
       if (!p) {
         throw new BadRequestException(`product ${l.productId}`);
