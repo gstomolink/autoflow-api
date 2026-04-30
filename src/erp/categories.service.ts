@@ -17,15 +17,14 @@ export class CategoriesService {
     private readonly productsRepository: Repository<ProductEntity>,
   ) {}
 
-  async findAll(shopId: string) {
+  async findAll() {
     const rows = await this.categoriesRepository.find({
-      where: { shopId },
       order: { name: 'ASC' },
     });
     const withCount = await Promise.all(
       rows.map(async (c) => {
         const productCount = await this.productsRepository.count({
-          where: { categoryId: c.id, shopId },
+          where: { categoryId: c.id },
         });
         return {
           ...c,
@@ -36,18 +35,17 @@ export class CategoriesService {
     return withCount;
   }
 
-  async create(shopId: string, dto: CreateCategoryDto) {
+  async create(dto: CreateCategoryDto) {
     const row = this.categoriesRepository.create({
-      shopId,
       name: dto.name.trim(),
       description: dto.description?.trim() ?? null,
     });
     return this.categoriesRepository.save(row);
   }
 
-  async update(shopId: string, id: number, dto: UpdateCategoryDto) {
+  async update(id: number, dto: UpdateCategoryDto) {
     const row = await this.categoriesRepository.findOne({
-      where: { id, shopId },
+      where: { id },
     });
     if (!row) {
       throw new NotFoundException();
@@ -59,9 +57,9 @@ export class CategoriesService {
     return this.categoriesRepository.save(row);
   }
 
-  async remove(shopId: string, id: number) {
+  async remove(id: number) {
     const row = await this.categoriesRepository.findOne({
-      where: { id, shopId },
+      where: { id },
     });
     if (!row) {
       throw new NotFoundException();
@@ -69,7 +67,7 @@ export class CategoriesService {
     await this.categoriesRepository.remove(row);
   }
 
-  async bulkCreate(shopId: string, file: Express.Multer.File) {
+  async bulkCreate(file: Express.Multer.File) {
     const results: any[] = [];
     return new Promise((resolve, reject) => {
       Readable.from(file.buffer)
@@ -88,7 +86,6 @@ export class CategoriesService {
 
             try {
               const newCategory = this.categoriesRepository.create({
-                shopId,
                 name: name.trim(),
                 description: description?.trim() ?? null,
               });

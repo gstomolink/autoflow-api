@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -51,12 +52,19 @@ export class StockController {
   ensure(
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId: string | undefined,
-    @Query('warehouseId', ParseIntPipe) warehouseId: number,
+    @Query('warehouseId') warehouseId: string | undefined,
     @Query('productId', ParseIntPipe) productId: number,
   ) {
+    const parsedWarehouseId =
+      warehouseId && warehouseId.trim().length > 0
+        ? Number(warehouseId)
+        : undefined;
+    if (parsedWarehouseId !== undefined && !Number.isInteger(parsedWarehouseId)) {
+      throw new BadRequestException('warehouseId must be an integer');
+    }
     return this.stockService.ensureRow(
       resolveShopId(user, shopId),
-      warehouseId,
+      parsedWarehouseId,
       productId,
     );
   }

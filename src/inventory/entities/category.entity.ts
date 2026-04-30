@@ -5,9 +5,6 @@ export class CategoryEntity {
   @PrimaryGeneratedColumn({ type: 'int', unsigned: true })
   id!: number;
 
-  @Column({ type: 'varchar', length: 64, nullable: true })
-  shopId!: string | null;
-
   @Column({ length: 255 })
   name!: string;
 

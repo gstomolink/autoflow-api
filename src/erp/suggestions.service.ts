@@ -165,7 +165,6 @@ export class SuggestionsService {
   async runReplenishment(shopId: string) {
     const notifyBufferDays = await this.notifyBufferForShop(shopId);
     const products = await this.productsRepository.find({
-      where: { shopId },
       relations: ['primarySupplier'],
     });
     const productIds = products.map((p) => p.id);
@@ -175,14 +174,14 @@ export class SuggestionsService {
     }
     const stockRows = await this.stockRepository.find({
       where: { productId: In(productIds) },
-      relations: ['product'],
+      relations: ['product', 'warehouse'],
     });
     const totals = new Map<number, number>();
     for (const p of products) {
       totals.set(p.id, 0);
     }
     for (const s of stockRows) {
-      if (s.product?.shopId === shopId) {
+      if (s.warehouse?.shopId === shopId) {
         totals.set(
           s.productId,
           (totals.get(s.productId) ?? 0) + s.quantityOnHand,
@@ -224,7 +223,7 @@ export class SuggestionsService {
         });
         supplierLeadOverride = link?.leadTimeDays ?? null;
       }
-      if (!supplier || supplier.shopId !== shopId) {
+      if (!supplier) {
         continue;
       }
       const leadTimeDays = supplierLeadOverride ?? supplier.defaultLeadTimeDays;

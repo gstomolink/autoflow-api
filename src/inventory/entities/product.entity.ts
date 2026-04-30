@@ -10,13 +10,10 @@ import { CategoryEntity } from './category.entity';
 import { SupplierEntity } from './supplier.entity';
 
 @Entity({ name: 'products' })
-@Index(['shopId', 'sku'], { unique: true })
+@Index(['sku'], { unique: true })
 export class ProductEntity {
   @PrimaryGeneratedColumn({ type: 'int', unsigned: true })
   id!: number;
-
-  @Column({ type: 'varchar', length: 64, nullable: true })
-  shopId!: string | null;
 
   @Column({ type: 'int', unsigned: true, nullable: true })
   categoryId!: number | null;

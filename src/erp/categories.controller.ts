@@ -7,7 +7,6 @@ import {
   ParseIntPipe,
   Patch,
   Post,
-  Query,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -24,9 +23,6 @@ import { USER_ROLES } from '../constants/roles.constant';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
-import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { resolveShopId } from '../common/shop-scope';
-import type { JwtPayload } from '../auth/jwt-payload';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
@@ -40,21 +36,14 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List categories for shop' })
-  findAll(
-    @CurrentUser() user: JwtPayload,
-    @Query('shopId') shopId?: string,
-  ) {
-    return this.categoriesService.findAll(resolveShopId(user, shopId));
+  @ApiOperation({ summary: 'List categories' })
+  findAll() {
+    return this.categoriesService.findAll();
   }
 
   @Post()
-  create(
-    @CurrentUser() user: JwtPayload,
-    @Query('shopId') shopId: string | undefined,
-    @Body() dto: CreateCategoryDto,
-  ) {
-    return this.categoriesService.create(resolveShopId(user, shopId), dto);
+  create(@Body() dto: CreateCategoryDto) {
+    return this.categoriesService.create(dto);
   }
 
   @Post('bulk-upload')
@@ -71,34 +60,17 @@ export class CategoriesController {
       },
     },
   })
-  bulkCreate(
-    @CurrentUser() user: JwtPayload,
-    @Query('shopId') shopId: string | undefined,
-    @UploadedFile() file: Express.Multer.File,
-  ) {
-    return this.categoriesService.bulkCreate(resolveShopId(user, shopId), file);
+  bulkCreate(@UploadedFile() file: Express.Multer.File) {
+    return this.categoriesService.bulkCreate(file);
   }
 
   @Patch(':id')
-  update(
-    @CurrentUser() user: JwtPayload,
-    @Query('shopId') shopId: string | undefined,
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateCategoryDto,
-  ) {
-    return this.categoriesService.update(
-      resolveShopId(user, shopId),
-      id,
-      dto,
-    );
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateCategoryDto) {
+    return this.categoriesService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(
-    @CurrentUser() user: JwtPayload,
-    @Query('shopId') shopId: string | undefined,
-    @Param('id', ParseIntPipe) id: number,
-  ) {
-    return this.categoriesService.remove(resolveShopId(user, shopId), id);
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.categoriesService.remove(id);
   }
 }
