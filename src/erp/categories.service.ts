@@ -17,15 +17,17 @@ export class CategoriesService {
     private readonly productsRepository: Repository<ProductEntity>,
   ) {}
 
-  async findAll(shopId: string) {
+  async findAll(shopId?: string) {
+    const where = shopId ? { shopId } : {};
     const rows = await this.categoriesRepository.find({
-      where: { shopId },
+      where,
       order: { name: 'ASC' },
     });
     const withCount = await Promise.all(
       rows.map(async (c) => {
+        const countWhere = shopId ? { categoryId: c.id, shopId } : { categoryId: c.id };
         const productCount = await this.productsRepository.count({
-          where: { categoryId: c.id, shopId },
+          where: countWhere,
         });
         return {
           ...c,

@@ -16,9 +16,10 @@ export class WarehousesService {
     private readonly warehousesRepository: Repository<WarehouseEntity>,
   ) {}
 
-  findAll(shopId: string) {
+  findAll(shopId?: string) {
+    const where = shopId ? { shopId } : {};
     return this.warehousesRepository.find({
-      where: { shopId },
+      where,
       order: { name: 'ASC' },
     });
   }

@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { resolveShopId } from '../common/shop-scope';
+import { resolveOptionalShopId, resolveShopId } from '../common/shop-scope';
 import type { JwtPayload } from '../auth/jwt-payload';
 import { WarehousesService } from './warehouses.service';
 import { CreateWarehouseDto } from './dto/create-warehouse.dto';
@@ -32,7 +32,7 @@ export class WarehousesController {
 
   @Get()
   findAll(@CurrentUser() user: JwtPayload, @Query('shopId') shopId?: string) {
-    return this.warehousesService.findAll(resolveShopId(user, shopId));
+    return this.warehousesService.findAll(resolveOptionalShopId(user, shopId));
   }
 
   @Post()

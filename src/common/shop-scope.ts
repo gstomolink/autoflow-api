@@ -21,3 +21,13 @@ export function resolveShopId(
   }
   return user.shopId;
 }
+
+export function resolveOptionalShopId(
+  user: JwtPayload,
+  queryShopId?: string,
+): string | undefined {
+  if (user.role === USER_ROLES.SUPER_ADMIN) {
+    return queryShopId?.trim() || undefined;
+  }
+  return user.shopId || undefined;
+}

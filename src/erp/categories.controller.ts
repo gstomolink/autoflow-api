@@ -25,7 +25,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { resolveShopId } from '../common/shop-scope';
+import { resolveOptionalShopId, resolveShopId } from '../common/shop-scope';
 import type { JwtPayload } from '../auth/jwt-payload';
 import { CategoriesService } from './categories.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -45,7 +45,7 @@ export class CategoriesController {
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId?: string,
   ) {
-    return this.categoriesService.findAll(resolveShopId(user, shopId));
+    return this.categoriesService.findAll(resolveOptionalShopId(user, shopId));
   }
 
   @Post()

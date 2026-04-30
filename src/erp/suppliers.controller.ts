@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { resolveShopId } from '../common/shop-scope';
+import { resolveOptionalShopId, resolveShopId } from '../common/shop-scope';
 import type { JwtPayload } from '../auth/jwt-payload';
 import { SuppliersService } from './suppliers.service';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
@@ -32,7 +32,7 @@ export class SuppliersController {
 
   @Get()
   findAll(@CurrentUser() user: JwtPayload, @Query('shopId') shopId?: string) {
-    return this.suppliersService.findAll(resolveShopId(user, shopId));
+    return this.suppliersService.findAll(resolveOptionalShopId(user, shopId));
   }
 
   @Post()

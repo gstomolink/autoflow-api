@@ -12,9 +12,10 @@ export class SuppliersService {
     private readonly suppliersRepository: Repository<SupplierEntity>,
   ) {}
 
-  findAll(shopId: string) {
+  findAll(shopId?: string) {
+    const where = shopId ? { shopId } : {};
     return this.suppliersRepository.find({
-      where: { shopId },
+      where,
       order: { name: 'ASC' },
     });
   }

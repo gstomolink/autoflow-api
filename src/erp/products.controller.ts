@@ -16,7 +16,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
-import { resolveShopId } from '../common/shop-scope';
+import { resolveOptionalShopId, resolveShopId } from '../common/shop-scope';
 import type { JwtPayload } from '../auth/jwt-payload';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -33,7 +33,7 @@ export class ProductsController {
   @Get()
   @ApiOperation({ summary: 'List products' })
   findAll(@CurrentUser() user: JwtPayload, @Query('shopId') shopId?: string) {
-    return this.productsService.findAll(resolveShopId(user, shopId));
+    return this.productsService.findAll(resolveOptionalShopId(user, shopId));
   }
 
   @Post()

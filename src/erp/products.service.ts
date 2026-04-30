@@ -22,9 +22,10 @@ export class ProductsService {
     private readonly suppliersRepository: Repository<SupplierEntity>,
   ) {}
 
-  async findAll(shopId: string) {
+  async findAll(shopId?: string) {
+    const where = shopId ? { shopId } : {};
     const rows = await this.productsRepository.find({
-      where: { shopId },
+      where,
       relations: ['category', 'primarySupplier'],
       order: { name: 'ASC' },
     });

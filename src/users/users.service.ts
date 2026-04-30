@@ -67,10 +67,9 @@ export class UsersService {
       .orderBy('u.fullName', 'ASC');
     if (actor.role === USER_ROLES.SUPER_ADMIN) {
       const sid = queryShopId?.trim();
-      if (!sid) {
-        throw new BadRequestException('shop id is required');
+      if (sid) {
+        qb.andWhere('u.shopId = :sid', { sid });
       }
-      qb.andWhere('u.shopId = :sid', { sid });
       return qb.getMany();
     }
     if (actor.role === USER_ROLES.STORE_ADMIN && actor.shopId) {
