@@ -45,7 +45,7 @@ export class ShopsService {
     return [...set];
   }
 
-  async list(): Promise<ShopListItem[]> {
+  private async mergedShopList(): Promise<ShopListItem[]> {
     const registered = await this.shopsRepository.find({
       order: { shopId: 'ASC' },
     });
@@ -70,6 +70,19 @@ export class ShopsService {
     }
     return [...byId.values()].sort((a, b) =>
       a.shopId.localeCompare(b.shopId),
+    );
+  }
+
+  async list(search?: string): Promise<ShopListItem[]> {
+    const rows = await this.mergedShopList();
+    const q = search?.trim().toLowerCase();
+    if (!q) {
+      return rows;
+    }
+    return rows.filter(
+      (row) =>
+        row.shopId.toLowerCase().includes(q) ||
+        row.name.toLowerCase().includes(q),
     );
   }
 

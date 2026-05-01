@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
@@ -25,8 +26,8 @@ export class ShopsController {
   constructor(private readonly shopsService: ShopsService) {}
 
   @Get()
-  list() {
-    return this.shopsService.list();
+  list(@Query('search') search?: string) {
+    return this.shopsService.list(search);
   }
 
   @Post()
