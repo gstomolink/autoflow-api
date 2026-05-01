@@ -9,6 +9,9 @@ export class SupplierEntity {
   name!: string;
 
   @Column({ type: 'varchar', length: 64, nullable: true })
+  parentShopId!: string | null;
+
+  @Column({ type: 'varchar', length: 64, nullable: true })
   code!: string | null;
 
   @Column({ type: 'varchar', length: 255, nullable: true })

@@ -16,6 +16,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { STORE_STAFF_TYPES, USER_ROLES } from '../constants/roles.constant';
+import { ShopEntity } from '../inventory/entities/shop.entity';
 import type { JwtPayload } from '../auth/jwt-payload';
 import { CreateUserDto } from './dto/create-user.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -30,7 +31,18 @@ export class UsersService {
   constructor(
     @InjectRepository(UserEntity)
     private readonly usersRepository: Repository<UserEntity>,
+    @InjectRepository(ShopEntity)
+    private readonly shopsRepository: Repository<ShopEntity>,
   ) {}
+
+  private async resolveParentShopId(shopId: string): Promise<string> {
+    const row = await this.shopsRepository.findOne({
+      where: { shopId },
+      select: { shopId: true, parentShopId: true },
+    });
+    if (!row) return shopId;
+    return row.parentShopId?.trim() || row.shopId;
+  }
 
   async findAll(): Promise<UserEntity[]> {
     return this.usersRepository.find({
@@ -78,7 +90,8 @@ export class UsersService {
       if (!sid) {
         throw new BadRequestException('shop id is required');
       }
-      qb.andWhere('u.shopId = :sid', { sid });
+      const parentShopId = await this.resolveParentShopId(sid);
+      qb.andWhere('u.shopId = :sid', { sid: parentShopId });
       const total = await qb.getCount();
       const items = await qb.skip(skip).take(l).getMany();
       return toPaginated(items, total, p, l);
@@ -99,7 +112,10 @@ export class UsersService {
     }
 
     const normalizedUserId = createUserDto.userId.trim().toLowerCase();
-    const normalizedShopId = createUserDto.shopId?.trim() || null;
+    const normalizedShopIdInput = createUserDto.shopId?.trim() || null;
+    const normalizedShopId = normalizedShopIdInput
+      ? await this.resolveParentShopId(normalizedShopIdInput)
+      : null;
     const normalizedEmail = createUserDto.email?.toLowerCase() ?? null;
 
     if (createUserDto.role === USER_ROLES.SUPER_ADMIN && normalizedShopId) {

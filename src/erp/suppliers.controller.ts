@@ -13,9 +13,13 @@ import {
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { USER_ROLES } from '../constants/roles.constant';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { JwtPayload } from '../auth/jwt-payload';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import { resolveShopId } from '../common/shop-scope';
 import { SuppliersService } from './suppliers.service';
+import { ShopsService } from './shops.service';
 import { CreateSupplierProductLinkDto } from './dto/create-supplier-product-link.dto';
 import { CreateSupplierDto } from './dto/create-supplier.dto';
 import { UpdateSupplierDto } from './dto/update-supplier.dto';
@@ -26,29 +30,62 @@ import { UpdateSupplierDto } from './dto/update-supplier.dto';
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles(USER_ROLES.SUPER_ADMIN, USER_ROLES.STORE_ADMIN, USER_ROLES.STORE_STAFF)
 export class SuppliersController {
-  constructor(private readonly suppliersService: SuppliersService) {}
+  constructor(
+    private readonly suppliersService: SuppliersService,
+    private readonly shopsService: ShopsService,
+  ) {}
 
   @Get()
-  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+  async findAll(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId: string | undefined,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    const resolvedShopId = resolveShopId(user, shopId);
+    const parentShopId = await this.shopsService.resolveParentShopId(resolvedShopId);
     return this.suppliersService.findAll(
+      parentShopId,
       page !== undefined ? Number(page) : undefined,
       limit !== undefined ? Number(limit) : undefined,
     );
   }
 
   @Post()
-  create(@Body() dto: CreateSupplierDto) {
-    return this.suppliersService.create(dto);
+  @Roles(USER_ROLES.SUPER_ADMIN, USER_ROLES.STORE_ADMIN)
+  async create(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId: string | undefined,
+    @Body() dto: CreateSupplierDto,
+  ) {
+    const resolvedShopId = resolveShopId(user, shopId);
+    const parentShopId = await this.shopsService.resolveParentShopId(resolvedShopId);
+    return this.suppliersService.create(parentShopId, dto);
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateSupplierDto) {
-    return this.suppliersService.update(id, dto);
+  @Roles(USER_ROLES.SUPER_ADMIN, USER_ROLES.STORE_ADMIN)
+  async update(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId: string | undefined,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateSupplierDto,
+  ) {
+    const resolvedShopId = resolveShopId(user, shopId);
+    const parentShopId = await this.shopsService.resolveParentShopId(resolvedShopId);
+    return this.suppliersService.update(parentShopId, id, dto);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.suppliersService.remove(id);
+  @Roles(USER_ROLES.SUPER_ADMIN, USER_ROLES.STORE_ADMIN)
+  async remove(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId: string | undefined,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    const resolvedShopId = resolveShopId(user, shopId);
+    const parentShopId = await this.shopsService.resolveParentShopId(resolvedShopId);
+    return this.suppliersService.remove(parentShopId, id);
   }
 
   @Get(':id/products')
@@ -57,6 +94,7 @@ export class SuppliersController {
   }
 
   @Post(':id/products')
+  @Roles(USER_ROLES.SUPER_ADMIN, USER_ROLES.STORE_ADMIN)
   addProduct(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: CreateSupplierProductLinkDto,

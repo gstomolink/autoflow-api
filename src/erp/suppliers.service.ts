@@ -20,9 +20,10 @@ export class SuppliersService {
     private readonly supplierProductsRepository: Repository<SupplierProductEntity>,
   ) {}
 
-  async findAll(page?: number, limit?: number) {
+  async findAll(parentShopId: string, page?: number, limit?: number) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
     const [items, total] = await this.suppliersRepository.findAndCount({
+      where: { parentShopId },
       order: { name: 'ASC' },
       skip,
       take: l,
@@ -30,8 +31,9 @@ export class SuppliersService {
     return toPaginated(items, total, p, l);
   }
 
-  async create(dto: CreateSupplierDto) {
+  async create(parentShopId: string, dto: CreateSupplierDto) {
     const row = this.suppliersRepository.create({
+      parentShopId,
       name: dto.name.trim(),
       code: dto.code?.trim() ?? null,
       email: dto.email?.trim().toLowerCase() ?? null,
@@ -42,9 +44,9 @@ export class SuppliersService {
     return this.suppliersRepository.save(row);
   }
 
-  async update(id: number, dto: UpdateSupplierDto) {
+  async update(parentShopId: string, id: number, dto: UpdateSupplierDto) {
     const row = await this.suppliersRepository.findOne({
-      where: { id },
+      where: { id, parentShopId },
     });
     if (!row) {
       throw new NotFoundException();
@@ -64,9 +66,9 @@ export class SuppliersService {
     return this.suppliersRepository.save(row);
   }
 
-  async remove(id: number) {
+  async remove(parentShopId: string, id: number) {
     const row = await this.suppliersRepository.findOne({
-      where: { id },
+      where: { id, parentShopId },
     });
     if (!row) {
       throw new NotFoundException();

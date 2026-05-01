@@ -20,12 +20,14 @@ export class AuthService {
     const normalizedShopId = loginDto.shopId?.trim() || null;
 
     const user = normalizedShopId
-      ? await this.usersRepository.findOne({
-          where: {
-            userId: normalizedUserId,
+      ? await this.usersRepository
+          .createQueryBuilder('u')
+          .where('u.userId = :userId', { userId: normalizedUserId })
+          // allow shop id with different casing (e.g. Shop1 vs shop1)
+          .andWhere('LOWER(u.shopId) = LOWER(:shopId)', {
             shopId: normalizedShopId,
-          },
-        })
+          })
+          .getOne()
       : await this.usersRepository.findOne({
           where: {
             userId: normalizedUserId,

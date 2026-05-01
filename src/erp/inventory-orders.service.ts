@@ -13,6 +13,7 @@ import {
   InventoryOrderStatus,
 } from '../inventory/entities/inventory-order.entity';
 import { ProductEntity } from '../inventory/entities/product.entity';
+import { ShopEntity } from '../inventory/entities/shop.entity';
 import { SupplierProductEntity } from '../inventory/entities/supplier-product.entity';
 import { SupplierEntity } from '../inventory/entities/supplier.entity';
 import { CreateInventoryOrderDto } from './dto/create-inventory-order.dto';
@@ -29,10 +30,27 @@ export class InventoryOrdersService {
     private readonly suppliersRepository: Repository<SupplierEntity>,
     @InjectRepository(ProductEntity)
     private readonly productsRepository: Repository<ProductEntity>,
+    @InjectRepository(ShopEntity)
+    private readonly shopsRepository: Repository<ShopEntity>,
     @InjectRepository(SupplierProductEntity)
     private readonly supplierProductsRepository: Repository<SupplierProductEntity>,
     private readonly dataSource: DataSource,
   ) {}
+
+  private async expandShopIds(shopId: string): Promise<string[]> {
+    const row = await this.shopsRepository.findOne({
+      where: { shopId },
+      select: { shopId: true, parentShopId: true },
+    });
+    if (!row || row.parentShopId) {
+      return [shopId];
+    }
+    const children = await this.shopsRepository.find({
+      where: { parentShopId: shopId },
+      select: { shopId: true },
+    });
+    return [shopId, ...children.map((c) => c.shopId)];
+  }
 
   async list(
     shopId: string,
@@ -41,9 +59,10 @@ export class InventoryOrdersService {
     limit?: number,
   ) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
+    const shopIds = await this.expandShopIds(shopId);
     const countQb = this.ordersRepository
       .createQueryBuilder('o')
-      .where('o.shopId = :shopId', { shopId });
+      .where('o.shopId IN (:...shopIds)', { shopIds });
     if (source) {
       countQb.andWhere('o.source = :source', { source });
     }
@@ -54,7 +73,7 @@ export class InventoryOrdersService {
       .leftJoinAndSelect('o.supplier', 's')
       .leftJoinAndSelect('o.lines', 'l')
       .leftJoinAndSelect('l.product', 'p')
-      .where('o.shopId = :shopId', { shopId })
+      .where('o.shopId IN (:...shopIds)', { shopIds })
       .orderBy('o.createdAt', 'DESC');
     if (source) {
       q.andWhere('o.source = :source', { source });

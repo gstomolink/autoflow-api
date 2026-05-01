@@ -14,6 +14,9 @@ export class ShopEntity {
   @Column({ type: 'varchar', length: 512, nullable: true })
   address!: string | null;
 
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  parentShopId!: string | null;
+
   @Column({ type: 'int', unsigned: true, default: 1 })
   replenishmentNotifyBufferDays!: number;
 

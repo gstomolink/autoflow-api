@@ -13,6 +13,8 @@ import { USER_ROLES } from '../constants/roles.constant';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/jwt-payload';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopReplenishmentDto } from './dto/update-shop-replenishment.dto';
 import { ShopsService } from './shops.service';
@@ -21,17 +23,19 @@ import { ShopsService } from './shops.service';
 @ApiBearerAuth()
 @Controller('shops')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(USER_ROLES.SUPER_ADMIN)
+@Roles(USER_ROLES.SUPER_ADMIN, USER_ROLES.STORE_ADMIN)
 export class ShopsController {
   constructor(private readonly shopsService: ShopsService) {}
 
   @Get()
   list(
+    @CurrentUser() user: JwtPayload,
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
-    return this.shopsService.list(
+    return this.shopsService.listForActor(
+      user,
       search,
       page !== undefined ? Number(page) : undefined,
       limit !== undefined ? Number(limit) : undefined,
@@ -39,8 +43,8 @@ export class ShopsController {
   }
 
   @Post()
-  create(@Body() dto: CreateShopDto) {
-    return this.shopsService.create(dto);
+  create(@CurrentUser() user: JwtPayload, @Body() dto: CreateShopDto) {
+    return this.shopsService.createForActor(user, dto);
   }
 
   @Patch(':shopId/replenishment')

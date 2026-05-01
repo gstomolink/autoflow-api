@@ -1,4 +1,4 @@
-import { IsString, Length } from 'class-validator';
+import { IsOptional, IsString, Length } from 'class-validator';
 
 export class CreateShopDto {
   @IsString()
@@ -12,4 +12,9 @@ export class CreateShopDto {
   @IsString()
   @Length(1, 512)
   address!: string;
+
+  @IsOptional()
+  @IsString()
+  @Length(2, 64)
+  parentShopId?: string;
 }

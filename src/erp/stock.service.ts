@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { InventoryStockEntity } from '../inventory/entities/inventory-stock.entity';
 import { ProductEntity } from '../inventory/entities/product.entity';
+import { ShopEntity } from '../inventory/entities/shop.entity';
 import { WarehouseEntity } from '../inventory/entities/warehouse.entity';
 
 const SHOP_INVENTORY_CODE = 'SHOP-STOCK';
@@ -17,12 +18,30 @@ export class StockService {
     private readonly warehousesRepository: Repository<WarehouseEntity>,
     @InjectRepository(ProductEntity)
     private readonly productsRepository: Repository<ProductEntity>,
+    @InjectRepository(ShopEntity)
+    private readonly shopsRepository: Repository<ShopEntity>,
   ) {}
+
+  private async expandShopIds(shopId: string): Promise<string[]> {
+    const row = await this.shopsRepository.findOne({
+      where: { shopId },
+      select: { shopId: true, parentShopId: true },
+    });
+    if (!row || row.parentShopId) {
+      return [shopId];
+    }
+    const children = await this.shopsRepository.find({
+      where: { parentShopId: shopId },
+      select: { shopId: true },
+    });
+    return [shopId, ...children.map((c) => c.shopId)];
+  }
 
   async listRows(shopId: string, page?: number, limit?: number) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
+    const shopIds = await this.expandShopIds(shopId);
     const warehouses = await this.warehousesRepository.find({
-      where: { shopId },
+      where: { shopId: In(shopIds) },
       select: { id: true },
     });
     const whIds = warehouses.map((w) => w.id);
@@ -33,7 +52,7 @@ export class StockService {
       where: { warehouseId: In(whIds) },
       relations: ['warehouse', 'product'],
     });
-    const scoped = rows.filter((r) => r.warehouse?.shopId === shopId);
+    const scoped = rows.filter((r) => shopIds.includes(r.warehouse?.shopId ?? ''));
     const mapped = scoped.map((r) => ({
       id: r.id,
       productName: r.product?.name ?? '',

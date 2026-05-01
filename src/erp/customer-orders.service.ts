@@ -5,12 +5,13 @@ import {
 } from '@nestjs/common';
 import { normalizePagination, toPaginated } from '../common/pagination';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import {
   CustomerOrderEntity,
   CustomerOrderLineEntity,
 } from '../inventory/entities/customer-order.entity';
 import { ProductEntity } from '../inventory/entities/product.entity';
+import { ShopEntity } from '../inventory/entities/shop.entity';
 import { CreateCustomerOrderDto } from './dto/create-customer-order.dto';
 
 @Injectable()
@@ -22,14 +23,34 @@ export class CustomerOrdersService {
     private readonly linesRepository: Repository<CustomerOrderLineEntity>,
     @InjectRepository(ProductEntity)
     private readonly productsRepository: Repository<ProductEntity>,
+    @InjectRepository(ShopEntity)
+    private readonly shopsRepository: Repository<ShopEntity>,
     private readonly dataSource: DataSource,
   ) {}
 
+  private async expandShopIds(shopId: string): Promise<string[]> {
+    const row = await this.shopsRepository.findOne({
+      where: { shopId },
+      select: { shopId: true, parentShopId: true },
+    });
+    if (!row || row.parentShopId) {
+      return [shopId];
+    }
+    const children = await this.shopsRepository.find({
+      where: { parentShopId: shopId },
+      select: { shopId: true },
+    });
+    return [shopId, ...children.map((c) => c.shopId)];
+  }
+
   async list(shopId: string, page?: number, limit?: number) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
-    const total = await this.ordersRepository.count({ where: { shopId } });
+    const shopIds = await this.expandShopIds(shopId);
+    const total = await this.ordersRepository.count({
+      where: { shopId: In(shopIds) },
+    });
     const items = await this.ordersRepository.find({
-      where: { shopId },
+      where: { shopId: In(shopIds) },
       relations: ['lines', 'lines.product'],
       order: { createdAt: 'DESC' },
       skip,

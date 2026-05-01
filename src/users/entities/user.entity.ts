@@ -79,7 +79,7 @@ export class UserEntity {
 }
 
 export const roleCreationRules: Record<UserRoleValue, UserRoleValue[]> = {
-  [USER_ROLES.SUPER_ADMIN]: [USER_ROLES.STORE_ADMIN],
+  [USER_ROLES.SUPER_ADMIN]: [USER_ROLES.STORE_ADMIN, USER_ROLES.STORE_STAFF],
   [USER_ROLES.STORE_ADMIN]: [USER_ROLES.STORE_STAFF],
   [USER_ROLES.STORE_STAFF]: [],
 };

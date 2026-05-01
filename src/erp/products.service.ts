@@ -29,9 +29,10 @@ export class ProductsService {
     private readonly supplierProductsRepository: Repository<SupplierProductEntity>,
   ) {}
 
-  async findAll(page?: number, limit?: number) {
+  async findAll(parentShopId: string, page?: number, limit?: number) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
     const [rows, total] = await this.productsRepository.findAndCount({
+      where: { parentShopId },
       relations: ['category', 'primarySupplier'],
       order: { name: 'ASC' },
       skip,
@@ -54,10 +55,10 @@ export class ProductsService {
     return toPaginated(items, total, p, l);
   }
 
-  async create(dto: CreateProductDto) {
+  async create(parentShopId: string, dto: CreateProductDto) {
     const sku = dto.sku.trim();
     const exists = await this.productsRepository.findOne({
-      where: { sku },
+      where: { sku, parentShopId },
       select: { id: true },
     });
     if (exists) {
@@ -65,7 +66,7 @@ export class ProductsService {
     }
     if (dto.categoryId) {
       const cat = await this.categoriesRepository.findOne({
-        where: { id: dto.categoryId },
+        where: { id: dto.categoryId, parentShopId },
       });
       if (!cat) {
         throw new NotFoundException('category not found');
@@ -73,13 +74,14 @@ export class ProductsService {
     }
     if (dto.primarySupplierId) {
       const sup = await this.suppliersRepository.findOne({
-        where: { id: dto.primarySupplierId },
+        where: { id: dto.primarySupplierId, parentShopId },
       });
       if (!sup) {
         throw new NotFoundException('supplier not found');
       }
     }
     const row = this.productsRepository.create({
+      parentShopId,
       sku,
       name: dto.name.trim(),
       categoryId: dto.categoryId ?? null,
@@ -91,15 +93,15 @@ export class ProductsService {
     });
     if (dto.primarySupplierId) {
       row.primarySupplier = await this.suppliersRepository.findOneOrFail({
-        where: { id: dto.primarySupplierId },
+        where: { id: dto.primarySupplierId, parentShopId },
       });
     }
     return this.productsRepository.save(row);
   }
 
-  async update(id: number, dto: UpdateProductDto) {
+  async update(parentShopId: string, id: number, dto: UpdateProductDto) {
     const row = await this.productsRepository.findOne({
-      where: { id },
+      where: { id, parentShopId },
       relations: ['primarySupplier'],
     });
     if (!row) {
@@ -108,7 +110,7 @@ export class ProductsService {
     if (dto.sku !== undefined) {
       const sku = dto.sku.trim();
       const clash = await this.productsRepository.findOne({
-        where: { sku },
+        where: { sku, parentShopId },
         select: { id: true },
       });
       if (clash && clash.id !== id) {
@@ -129,7 +131,7 @@ export class ProductsService {
     if (dto.categoryId !== undefined) {
       if (dto.categoryId) {
         const cat = await this.categoriesRepository.findOne({
-          where: { id: dto.categoryId },
+          where: { id: dto.categoryId, parentShopId },
         });
         if (!cat) {
           throw new NotFoundException('category not found');
@@ -140,7 +142,7 @@ export class ProductsService {
     if (dto.primarySupplierId !== undefined) {
       if (dto.primarySupplierId) {
         const sup = await this.suppliersRepository.findOne({
-          where: { id: dto.primarySupplierId },
+          where: { id: dto.primarySupplierId, parentShopId },
         });
         if (!sup) {
           throw new NotFoundException('supplier not found');
@@ -153,8 +155,8 @@ export class ProductsService {
     return this.productsRepository.save(row);
   }
 
-  async remove(id: number) {
-    const row = await this.productsRepository.findOne({ where: { id } });
+  async remove(parentShopId: string, id: number) {
+    const row = await this.productsRepository.findOne({ where: { id, parentShopId } });
     if (!row) {
       throw new NotFoundException();
     }

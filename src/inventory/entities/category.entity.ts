@@ -8,6 +8,9 @@ export class CategoryEntity {
   @Column({ length: 255 })
   name!: string;
 
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  parentShopId!: string | null;
+
   @Column({ type: 'varchar', length: 500, nullable: true })
   description!: string | null;
 

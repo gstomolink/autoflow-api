@@ -18,9 +18,10 @@ export class CategoriesService {
     private readonly productsRepository: Repository<ProductEntity>,
   ) {}
 
-  async findAll(page?: number, limit?: number) {
+  async findAll(parentShopId: string, page?: number, limit?: number) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
     const [rows, total] = await this.categoriesRepository.findAndCount({
+      where: { parentShopId },
       order: { name: 'ASC' },
       skip,
       take: l,
@@ -46,17 +47,18 @@ export class CategoriesService {
     return toPaginated(items, total, p, l);
   }
 
-  async create(dto: CreateCategoryDto) {
+  async create(parentShopId: string, dto: CreateCategoryDto) {
     const row = this.categoriesRepository.create({
+      parentShopId,
       name: dto.name.trim(),
       description: dto.description?.trim() ?? null,
     });
     return this.categoriesRepository.save(row);
   }
 
-  async update(id: number, dto: UpdateCategoryDto) {
+  async update(parentShopId: string, id: number, dto: UpdateCategoryDto) {
     const row = await this.categoriesRepository.findOne({
-      where: { id },
+      where: { id, parentShopId },
     });
     if (!row) {
       throw new NotFoundException();
@@ -68,9 +70,9 @@ export class CategoriesService {
     return this.categoriesRepository.save(row);
   }
 
-  async remove(id: number) {
+  async remove(parentShopId: string, id: number) {
     const row = await this.categoriesRepository.findOne({
-      where: { id },
+      where: { id, parentShopId },
     });
     if (!row) {
       throw new NotFoundException();
@@ -78,7 +80,7 @@ export class CategoriesService {
     await this.categoriesRepository.remove(row);
   }
 
-  async bulkCreate(file: Express.Multer.File) {
+  async bulkCreate(parentShopId: string, file: Express.Multer.File) {
     const results: any[] = [];
     return new Promise((resolve, reject) => {
       Readable.from(file.buffer)
@@ -97,6 +99,7 @@ export class CategoriesService {
 
             try {
               const newCategory = this.categoriesRepository.create({
+                parentShopId,
                 name: name.trim(),
                 description: description?.trim() ?? null,
               });
