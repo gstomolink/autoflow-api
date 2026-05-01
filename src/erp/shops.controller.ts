@@ -17,7 +17,7 @@ import { CurrentUser } from '../common/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/jwt-payload';
 import { CreateShopDto } from './dto/create-shop.dto';
 import { UpdateShopReplenishmentDto } from './dto/update-shop-replenishment.dto';
-import { ShopsService } from './shops.service';
+import { ShopsService, type ShopTypeFilter } from './shops.service';
 
 @ApiTags('shops')
 @ApiBearerAuth()
@@ -33,12 +33,18 @@ export class ShopsController {
     @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
+    @Query('storeType') storeType?: string,
+    @Query('parentShopId') parentShopId?: string,
   ) {
+    const parsedStoreType: ShopTypeFilter | undefined =
+      storeType === 'parent' || storeType === 'child' ? storeType : undefined;
     return this.shopsService.listForActor(
       user,
       search,
       page !== undefined ? Number(page) : undefined,
       limit !== undefined ? Number(limit) : undefined,
+      parsedStoreType,
+      parentShopId,
     );
   }
 

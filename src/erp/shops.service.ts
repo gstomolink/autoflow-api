@@ -21,6 +21,8 @@ export type ShopListItem = {
   replenishmentNotifyBufferDays: number | null;
 };
 
+export type ShopTypeFilter = 'parent' | 'child';
+
 @Injectable()
 export class ShopsService {
   constructor(
@@ -83,17 +85,38 @@ export class ShopsService {
     );
   }
 
+  private applyTypeFilters(
+    rows: ShopListItem[],
+    storeType?: ShopTypeFilter,
+    parentShopId?: string,
+  ): ShopListItem[] {
+    const normalizedParent = parentShopId?.trim() || '';
+    let filtered = rows;
+    if (storeType === 'parent') {
+      filtered = filtered.filter((row) => !row.parentShopId);
+    } else if (storeType === 'child') {
+      filtered = filtered.filter((row) => Boolean(row.parentShopId));
+    }
+    if (normalizedParent) {
+      filtered = filtered.filter((row) => row.parentShopId === normalizedParent);
+    }
+    return filtered;
+  }
+
   async list(
     search?: string,
     page?: number,
     limit?: number,
+    storeType?: ShopTypeFilter,
+    parentShopId?: string,
   ): Promise<PaginatedResult<ShopListItem>> {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
     const rows = await this.mergedShopList();
+    const typeFiltered = this.applyTypeFilters(rows, storeType, parentShopId);
     const q = search?.trim().toLowerCase();
     const filtered = !q
-      ? rows
-      : rows.filter(
+      ? typeFiltered
+      : typeFiltered.filter(
           (row) =>
             row.shopId.toLowerCase().includes(q) ||
             row.name.toLowerCase().includes(q),
@@ -108,16 +131,21 @@ export class ShopsService {
     search?: string,
     page?: number,
     limit?: number,
+    storeType?: ShopTypeFilter,
+    parentShopId?: string,
   ): Promise<PaginatedResult<ShopListItem>> {
     if (actor.role === USER_ROLES.SUPER_ADMIN) {
-      return this.list(search, page, limit);
+      return this.list(search, page, limit, storeType, parentShopId);
     }
-    const parentShopId = await this.resolveParentShopId(actor.shopId ?? '');
+    const resolvedParentShopId = await this.resolveParentShopId(actor.shopId ?? '');
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
     const rows = await this.mergedShopList();
-    const scoped = rows.filter(
-      (row) => row.shopId === parentShopId || row.parentShopId === parentShopId,
+    const scopeRows = rows.filter(
+      (row) =>
+        row.shopId === resolvedParentShopId ||
+        row.parentShopId === resolvedParentShopId,
     );
+    const scoped = this.applyTypeFilters(scopeRows, storeType, parentShopId);
     const q = search?.trim().toLowerCase();
     const filtered = !q
       ? scoped
