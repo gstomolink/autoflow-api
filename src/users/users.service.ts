@@ -8,6 +8,11 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import {
+  normalizePagination,
+  toPaginated,
+  type PaginatedResult,
+} from '../common/pagination';
 import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, Repository } from 'typeorm';
 import { STORE_STAFF_TYPES, USER_ROLES } from '../constants/roles.constant';
@@ -47,10 +52,13 @@ export class UsersService {
   async findAllForActor(
     actor: JwtPayload,
     queryShopId?: string,
-  ): Promise<UserEntity[]> {
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<UserEntity>> {
     if (actor.role === USER_ROLES.STORE_STAFF) {
       throw new ForbiddenException();
     }
+    const { page: p, limit: l, skip } = normalizePagination(page, limit);
     const qb = this.usersRepository
       .createQueryBuilder('u')
       .select([
@@ -71,11 +79,15 @@ export class UsersService {
         throw new BadRequestException('shop id is required');
       }
       qb.andWhere('u.shopId = :sid', { sid });
-      return qb.getMany();
+      const total = await qb.getCount();
+      const items = await qb.skip(skip).take(l).getMany();
+      return toPaginated(items, total, p, l);
     }
     if (actor.role === USER_ROLES.STORE_ADMIN && actor.shopId) {
       qb.andWhere('u.shopId = :sid', { sid: actor.shopId });
-      return qb.getMany();
+      const total = await qb.getCount();
+      const items = await qb.skip(skip).take(l).getMany();
+      return toPaginated(items, total, p, l);
     }
     throw new ForbiddenException();
   }

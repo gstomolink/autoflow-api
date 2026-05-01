@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { normalizePagination, toPaginated } from '../common/pagination';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import {
@@ -146,12 +147,16 @@ export class SuggestionsService {
     };
   }
 
-  async list(shopId: string) {
-    return this.suggestionsRepository.find({
+  async list(shopId: string, page?: number, limit?: number) {
+    const { page: p, limit: l, skip } = normalizePagination(page, limit);
+    const [items, total] = await this.suggestionsRepository.findAndCount({
       where: { shopId },
       relations: ['product', 'supplier'],
       order: { computedAt: 'DESC' },
+      skip,
+      take: l,
     });
+    return toPaginated(items, total, p, l);
   }
 
   private async notifyBufferForShop(shopId: string): Promise<number> {

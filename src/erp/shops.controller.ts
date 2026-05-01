@@ -26,8 +26,16 @@ export class ShopsController {
   constructor(private readonly shopsService: ShopsService) {}
 
   @Get()
-  list(@Query('search') search?: string) {
-    return this.shopsService.list(search);
+  list(
+    @Query('search') search?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.shopsService.list(
+      search,
+      page !== undefined ? Number(page) : undefined,
+      limit !== undefined ? Number(limit) : undefined,
+    );
   }
 
   @Post()

@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -29,9 +30,15 @@ export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List products' })
-  findAll() {
-    return this.productsService.findAll();
+  @ApiOperation({ summary: 'List products (paginated)' })
+  findAll(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.productsService.findAll(
+      page !== undefined ? Number(page) : undefined,
+      limit !== undefined ? Number(limit) : undefined,
+    );
   }
 
   @Post()

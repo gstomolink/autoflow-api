@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { normalizePagination, toPaginated } from '../common/pagination';
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { InventoryStockEntity } from '../inventory/entities/inventory-stock.entity';
@@ -18,21 +19,22 @@ export class StockService {
     private readonly productsRepository: Repository<ProductEntity>,
   ) {}
 
-  async listRows(shopId: string) {
+  async listRows(shopId: string, page?: number, limit?: number) {
+    const { page: p, limit: l, skip } = normalizePagination(page, limit);
     const warehouses = await this.warehousesRepository.find({
       where: { shopId },
       select: { id: true },
     });
     const whIds = warehouses.map((w) => w.id);
     if (!whIds.length) {
-      return [];
+      return toPaginated([], 0, p, l);
     }
     const rows = await this.stockRepository.find({
       where: { warehouseId: In(whIds) },
       relations: ['warehouse', 'product'],
     });
     const scoped = rows.filter((r) => r.warehouse?.shopId === shopId);
-    return scoped.map((r) => ({
+    const mapped = scoped.map((r) => ({
       id: r.id,
       productName: r.product?.name ?? '',
       warehouseName: r.warehouse?.name ?? '',
@@ -45,6 +47,9 @@ export class StockService {
           ? 'Low Stock'
           : 'In Stock',
     }));
+    const total = mapped.length;
+    const items = mapped.slice(skip, skip + l);
+    return toPaginated(items, total, p, l);
   }
 
   async ensureRow(

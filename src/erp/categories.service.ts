@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { normalizePagination, toPaginated } from '../common/pagination';
 import { CategoryEntity } from '../inventory/entities/category.entity';
 import { ProductEntity } from '../inventory/entities/product.entity';
 import { CreateCategoryDto } from './dto/create-category.dto';
@@ -17,22 +18,32 @@ export class CategoriesService {
     private readonly productsRepository: Repository<ProductEntity>,
   ) {}
 
-  async findAll() {
-    const rows = await this.categoriesRepository.find({
+  async findAll(page?: number, limit?: number) {
+    const { page: p, limit: l, skip } = normalizePagination(page, limit);
+    const [rows, total] = await this.categoriesRepository.findAndCount({
       order: { name: 'ASC' },
+      skip,
+      take: l,
     });
-    const withCount = await Promise.all(
-      rows.map(async (c) => {
-        const productCount = await this.productsRepository.count({
-          where: { categoryId: c.id },
-        });
-        return {
-          ...c,
-          productCount,
-        };
-      }),
-    );
-    return withCount;
+    const ids = rows.map((c) => c.id);
+    const countMap = new Map<number, number>();
+    if (ids.length) {
+      const raw = await this.productsRepository
+        .createQueryBuilder('p')
+        .select('p.categoryId', 'categoryId')
+        .addSelect('COUNT(p.id)', 'cnt')
+        .where('p.categoryId IN (:...ids)', { ids })
+        .groupBy('p.categoryId')
+        .getRawMany<{ categoryId: number; cnt: string }>();
+      for (const r of raw) {
+        countMap.set(Number(r.categoryId), Number(r.cnt));
+      }
+    }
+    const items = rows.map((c) => ({
+      ...c,
+      productCount: countMap.get(c.id) ?? 0,
+    }));
+    return toPaginated(items, total, p, l);
   }
 
   async create(dto: CreateCategoryDto) {

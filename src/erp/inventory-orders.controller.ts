@@ -35,10 +35,14 @@ export class InventoryOrdersController {
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId: string | undefined,
     @Query('source') source?: 'manual' | 'automated',
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
     return this.inventoryOrdersService.list(
       resolveShopId(user, shopId),
       source,
+      page !== undefined ? Number(page) : undefined,
+      limit !== undefined ? Number(limit) : undefined,
     );
   }
 

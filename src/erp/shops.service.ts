@@ -1,4 +1,9 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  normalizePagination,
+  toPaginated,
+  type PaginatedResult,
+} from '../common/pagination';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ShopEntity } from '../inventory/entities/shop.entity';
@@ -73,17 +78,24 @@ export class ShopsService {
     );
   }
 
-  async list(search?: string): Promise<ShopListItem[]> {
+  async list(
+    search?: string,
+    page?: number,
+    limit?: number,
+  ): Promise<PaginatedResult<ShopListItem>> {
+    const { page: p, limit: l, skip } = normalizePagination(page, limit);
     const rows = await this.mergedShopList();
     const q = search?.trim().toLowerCase();
-    if (!q) {
-      return rows;
-    }
-    return rows.filter(
-      (row) =>
-        row.shopId.toLowerCase().includes(q) ||
-        row.name.toLowerCase().includes(q),
-    );
+    const filtered = !q
+      ? rows
+      : rows.filter(
+          (row) =>
+            row.shopId.toLowerCase().includes(q) ||
+            row.name.toLowerCase().includes(q),
+        );
+    const total = filtered.length;
+    const items = filtered.slice(skip, skip + l);
+    return toPaginated(items, total, p, l);
   }
 
   async create(dto: CreateShopDto): Promise<ShopEntity> {

@@ -35,8 +35,15 @@ export class UsersController {
   findAll(
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
   ) {
-    return this.usersService.findAllForActor(user, shopId);
+    return this.usersService.findAllForActor(
+      user,
+      shopId,
+      page !== undefined ? Number(page) : undefined,
+      limit !== undefined ? Number(limit) : undefined,
+    );
   }
 
   @Post()

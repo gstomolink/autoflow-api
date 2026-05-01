@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { normalizePagination, toPaginated } from '../common/pagination';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { WarehouseEntity } from '../inventory/entities/warehouse.entity';
@@ -16,11 +17,15 @@ export class WarehousesService {
     private readonly warehousesRepository: Repository<WarehouseEntity>,
   ) {}
 
-  findAll(shopId: string) {
-    return this.warehousesRepository.find({
+  async findAll(shopId: string, page?: number, limit?: number) {
+    const { page: p, limit: l, skip } = normalizePagination(page, limit);
+    const [items, total] = await this.warehousesRepository.findAndCount({
       where: { shopId },
       order: { name: 'ASC' },
+      skip,
+      take: l,
     });
+    return toPaginated(items, total, p, l);
   }
 
   async create(shopId: string, dto: CreateWarehouseDto) {

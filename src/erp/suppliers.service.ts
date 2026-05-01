@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { normalizePagination, toPaginated } from '../common/pagination';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ProductEntity } from '../inventory/entities/product.entity';
@@ -19,10 +20,14 @@ export class SuppliersService {
     private readonly supplierProductsRepository: Repository<SupplierProductEntity>,
   ) {}
 
-  findAll() {
-    return this.suppliersRepository.find({
+  async findAll(page?: number, limit?: number) {
+    const { page: p, limit: l, skip } = normalizePagination(page, limit);
+    const [items, total] = await this.suppliersRepository.findAndCount({
       order: { name: 'ASC' },
+      skip,
+      take: l,
     });
+    return toPaginated(items, total, p, l);
   }
 
   async create(dto: CreateSupplierDto) {

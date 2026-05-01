@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { normalizePagination, toPaginated } from '../common/pagination';
 import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
 import {
@@ -24,12 +25,17 @@ export class CustomerOrdersService {
     private readonly dataSource: DataSource,
   ) {}
 
-  list(shopId: string) {
-    return this.ordersRepository.find({
+  async list(shopId: string, page?: number, limit?: number) {
+    const { page: p, limit: l, skip } = normalizePagination(page, limit);
+    const total = await this.ordersRepository.count({ where: { shopId } });
+    const items = await this.ordersRepository.find({
       where: { shopId },
       relations: ['lines', 'lines.product'],
       order: { createdAt: 'DESC' },
+      skip,
+      take: l,
     });
+    return toPaginated(items, total, p, l);
   }
 
   async findOne(shopId: string, id: number) {

@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { normalizePagination, toPaginated } from '../common/pagination';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CategoryEntity } from '../inventory/entities/category.entity';
@@ -28,25 +29,29 @@ export class ProductsService {
     private readonly supplierProductsRepository: Repository<SupplierProductEntity>,
   ) {}
 
-  async findAll() {
-    const rows = await this.productsRepository.find({
+  async findAll(page?: number, limit?: number) {
+    const { page: p, limit: l, skip } = normalizePagination(page, limit);
+    const [rows, total] = await this.productsRepository.findAndCount({
       relations: ['category', 'primarySupplier'],
       order: { name: 'ASC' },
+      skip,
+      take: l,
     });
-    return rows.map((p) => ({
-      id: p.id,
-      sku: p.sku,
-      name: p.name,
-      imageUrl: p.imageUrl,
-      basePrice: p.basePrice,
-      categoryName: p.category?.name ?? '',
+    const items = rows.map((pr) => ({
+      id: pr.id,
+      sku: pr.sku,
+      name: pr.name,
+      imageUrl: pr.imageUrl,
+      basePrice: pr.basePrice,
+      categoryName: pr.category?.name ?? '',
       supplierCode:
-        p.primarySupplier?.code ?? p.primarySupplier?.name ?? '',
-      primarySupplierId: p.primarySupplier?.id ?? null,
-      reorderPoint: p.reorderPoint,
-      safetyStock: p.safetyStock,
-      avgDailySales: p.avgDailySales,
+        pr.primarySupplier?.code ?? pr.primarySupplier?.name ?? '',
+      primarySupplierId: pr.primarySupplier?.id ?? null,
+      reorderPoint: pr.reorderPoint,
+      safetyStock: pr.safetyStock,
+      avgDailySales: pr.avgDailySales,
     }));
+    return toPaginated(items, total, p, l);
   }
 
   async create(dto: CreateProductDto) {

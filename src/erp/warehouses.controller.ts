@@ -31,8 +31,17 @@ export class WarehousesController {
   constructor(private readonly warehousesService: WarehousesService) {}
 
   @Get()
-  findAll(@CurrentUser() user: JwtPayload, @Query('shopId') shopId?: string) {
-    return this.warehousesService.findAll(resolveShopId(user, shopId));
+  findAll(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.warehousesService.findAll(
+      resolveShopId(user, shopId),
+      page !== undefined ? Number(page) : undefined,
+      limit !== undefined ? Number(limit) : undefined,
+    );
   }
 
   @Post()

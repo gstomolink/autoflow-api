@@ -7,6 +7,7 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  Query,
   UseGuards,
   UseInterceptors,
   UploadedFile,
@@ -36,9 +37,12 @@ export class CategoriesController {
   constructor(private readonly categoriesService: CategoriesService) {}
 
   @Get()
-  @ApiOperation({ summary: 'List categories' })
-  findAll() {
-    return this.categoriesService.findAll();
+  @ApiOperation({ summary: 'List categories (paginated)' })
+  findAll(@Query('page') page?: string, @Query('limit') limit?: string) {
+    return this.categoriesService.findAll(
+      page !== undefined ? Number(page) : undefined,
+      limit !== undefined ? Number(limit) : undefined,
+    );
   }
 
   @Post()

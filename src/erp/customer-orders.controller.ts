@@ -28,8 +28,17 @@ export class CustomerOrdersController {
   constructor(private readonly customerOrdersService: CustomerOrdersService) {}
 
   @Get()
-  list(@CurrentUser() user: JwtPayload, @Query('shopId') shopId?: string) {
-    return this.customerOrdersService.list(resolveShopId(user, shopId));
+  list(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+  ) {
+    return this.customerOrdersService.list(
+      resolveShopId(user, shopId),
+      page !== undefined ? Number(page) : undefined,
+      limit !== undefined ? Number(limit) : undefined,
+    );
   }
 
   @Get(':id')
