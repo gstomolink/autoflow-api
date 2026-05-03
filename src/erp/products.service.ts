@@ -29,15 +29,33 @@ export class ProductsService {
     private readonly supplierProductsRepository: Repository<SupplierProductEntity>,
   ) {}
 
-  async findAll(parentShopId: string, page?: number, limit?: number) {
+  async findAll(
+    parentShopId: string,
+    search?: string,
+    category?: string,
+    page?: number,
+    limit?: number,
+  ) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
-    const [rows, total] = await this.productsRepository.findAndCount({
-      where: { parentShopId },
-      relations: ['category', 'primarySupplier'],
-      order: { name: 'ASC' },
-      skip,
-      take: l,
-    });
+    const qb = this.productsRepository
+      .createQueryBuilder('pr')
+      .leftJoinAndSelect('pr.category', 'c')
+      .leftJoinAndSelect('pr.primarySupplier', 'ps')
+      .where('pr.parentShopId = :parentShopId', { parentShopId })
+      .orderBy('pr.name', 'ASC')
+      .skip(skip)
+      .take(l);
+    const q = search?.trim().toLowerCase();
+    if (q) {
+      qb.andWhere('(LOWER(pr.name) LIKE :q OR LOWER(pr.sku) LIKE :q)', {
+        q: `%${q}%`,
+      });
+    }
+    const categoryName = category?.trim().toLowerCase();
+    if (categoryName) {
+      qb.andWhere('LOWER(c.name) = :categoryName', { categoryName });
+    }
+    const [rows, total] = await qb.getManyAndCount();
     const items = rows.map((pr) => ({
       id: pr.id,
       sku: pr.sku,

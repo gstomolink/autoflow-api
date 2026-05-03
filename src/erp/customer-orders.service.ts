@@ -43,19 +43,41 @@ export class CustomerOrdersService {
     return [shopId, ...children.map((c) => c.shopId)];
   }
 
-  async list(shopId: string, page?: number, limit?: number) {
+  async list(
+    shopId: string,
+    fromDate?: string,
+    toDate?: string,
+    status?: string,
+    paymentType?: string,
+    page?: number,
+    limit?: number,
+  ) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
     const shopIds = await this.expandShopIds(shopId);
-    const total = await this.ordersRepository.count({
-      where: { shopId: In(shopIds) },
-    });
-    const items = await this.ordersRepository.find({
-      where: { shopId: In(shopIds) },
-      relations: ['lines', 'lines.product'],
-      order: { createdAt: 'DESC' },
-      skip,
-      take: l,
-    });
+    const qb = this.ordersRepository
+      .createQueryBuilder('o')
+      .leftJoinAndSelect('o.lines', 'l')
+      .leftJoinAndSelect('l.product', 'p')
+      .where('o.shopId IN (:...shopIds)', { shopIds })
+      .orderBy('o.createdAt', 'DESC');
+    if (fromDate?.trim()) {
+      qb.andWhere('DATE(o.createdAt) >= :fromDate', { fromDate: fromDate.trim() });
+    }
+    if (toDate?.trim()) {
+      qb.andWhere('DATE(o.createdAt) <= :toDate', { toDate: toDate.trim() });
+    }
+    if (status?.trim()) {
+      qb.andWhere('LOWER(o.status) = :status', {
+        status: status.trim().toLowerCase(),
+      });
+    }
+    if (paymentType?.trim()) {
+      qb.andWhere('LOWER(o.paymentStatus) = :paymentStatus', {
+        paymentStatus: paymentType.trim().toLowerCase(),
+      });
+    }
+    const total = await qb.getCount();
+    const items = await qb.skip(skip).take(l).getMany();
     return toPaginated(items, total, p, l);
   }
 

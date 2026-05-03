@@ -37,7 +37,15 @@ export class StockService {
     return [shopId, ...children.map((c) => c.shopId)];
   }
 
-  async listRows(shopId: string, page?: number, limit?: number) {
+  async listRows(
+    shopId: string,
+    search?: string,
+    product?: string,
+    threshold?: number,
+    onlyLow?: boolean,
+    page?: number,
+    limit?: number,
+  ) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
     const shopIds = await this.expandShopIds(shopId);
     const warehouses = await this.warehousesRepository.find({
@@ -53,7 +61,7 @@ export class StockService {
       relations: ['warehouse', 'product'],
     });
     const scoped = rows.filter((r) => shopIds.includes(r.warehouse?.shopId ?? ''));
-    const mapped = scoped.map((r) => ({
+    let mapped = scoped.map((r) => ({
       id: r.id,
       productName: r.product?.name ?? '',
       warehouseName: r.warehouse?.name ?? '',
@@ -66,6 +74,20 @@ export class StockService {
           ? 'Low Stock'
           : 'In Stock',
     }));
+    const appliedThreshold = Number.isFinite(threshold) ? Number(threshold) : undefined;
+    const searchQ = search?.trim().toLowerCase();
+    if (searchQ) {
+      mapped = mapped.filter((row) =>
+        row.productName.toLowerCase().includes(searchQ),
+      );
+    }
+    const productName = product?.trim();
+    if (productName) {
+      mapped = mapped.filter((row) => row.productName === productName);
+    }
+    if (onlyLow && appliedThreshold !== undefined) {
+      mapped = mapped.filter((row) => row.quantityOnHand < appliedThreshold);
+    }
     const total = mapped.length;
     const items = mapped.slice(skip, skip + l);
     return toPaginated(items, total, p, l);

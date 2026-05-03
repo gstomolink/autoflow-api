@@ -20,14 +20,19 @@ export class SuppliersService {
     private readonly supplierProductsRepository: Repository<SupplierProductEntity>,
   ) {}
 
-  async findAll(parentShopId: string, page?: number, limit?: number) {
+  async findAll(parentShopId: string, search?: string, page?: number, limit?: number) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
-    const [items, total] = await this.suppliersRepository.findAndCount({
-      where: { parentShopId },
-      order: { name: 'ASC' },
-      skip,
-      take: l,
-    });
+    const qb = this.suppliersRepository
+      .createQueryBuilder('s')
+      .where('s.parentShopId = :parentShopId', { parentShopId })
+      .orderBy('s.name', 'ASC')
+      .skip(skip)
+      .take(l);
+    const q = search?.trim().toLowerCase();
+    if (q) {
+      qb.andWhere('LOWER(s.name) LIKE :q', { q: `%${q}%` });
+    }
+    const [items, total] = await qb.getManyAndCount();
     return toPaginated(items, total, p, l);
   }
 

@@ -48,6 +48,7 @@ export class CategoriesController {
   async findAll(
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId: string | undefined,
+    @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -55,6 +56,7 @@ export class CategoriesController {
     const parentShopId = await this.shopsService.resolveParentShopId(resolvedShopId);
     return this.categoriesService.findAll(
       parentShopId,
+      search,
       page !== undefined ? Number(page) : undefined,
       limit !== undefined ? Number(limit) : undefined,
     );

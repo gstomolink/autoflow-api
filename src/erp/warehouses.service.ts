@@ -17,14 +17,22 @@ export class WarehousesService {
     private readonly warehousesRepository: Repository<WarehouseEntity>,
   ) {}
 
-  async findAll(shopId: string, page?: number, limit?: number) {
+  async findAll(shopId: string, search?: string, page?: number, limit?: number) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
-    const [items, total] = await this.warehousesRepository.findAndCount({
-      where: { shopId },
-      order: { name: 'ASC' },
-      skip,
-      take: l,
-    });
+    const qb = this.warehousesRepository
+      .createQueryBuilder('w')
+      .where('w.shopId = :shopId', { shopId })
+      .orderBy('w.name', 'ASC')
+      .skip(skip)
+      .take(l);
+    const q = search?.trim().toLowerCase();
+    if (q) {
+      qb.andWhere(
+        '(LOWER(w.name) LIKE :q OR LOWER(w.code) LIKE :q OR LOWER(COALESCE(w.address, \'\')) LIKE :q)',
+        { q: `%${q}%` },
+      );
+    }
+    const [items, total] = await qb.getManyAndCount();
     return toPaginated(items, total, p, l);
   }
 

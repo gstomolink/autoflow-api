@@ -64,6 +64,8 @@ export class UsersService {
   async findAllForActor(
     actor: JwtPayload,
     queryShopId?: string,
+    search?: string,
+    role?: string,
     page?: number,
     limit?: number,
   ): Promise<PaginatedResult<UserEntity>> {
@@ -92,12 +94,38 @@ export class UsersService {
       }
       const parentShopId = await this.resolveParentShopId(sid);
       qb.andWhere('u.shopId = :sid', { sid: parentShopId });
+      if (search?.trim()) {
+        const q = `%${search.trim().toLowerCase()}%`;
+        qb.andWhere(
+          '(LOWER(u.fullName) LIKE :q OR LOWER(u.userId) LIKE :q OR LOWER(COALESCE(u.email, \'\')) LIKE :q OR COALESCE(u.phone, \'\') LIKE :qRaw)',
+          { q, qRaw: `%${search.trim()}%` },
+        );
+      }
+      if (role?.trim()) {
+        const roleNum = Number(role);
+        if (Number.isFinite(roleNum)) {
+          qb.andWhere('u.role = :roleNum', { roleNum });
+        }
+      }
       const total = await qb.getCount();
       const items = await qb.skip(skip).take(l).getMany();
       return toPaginated(items, total, p, l);
     }
     if (actor.role === USER_ROLES.STORE_ADMIN && actor.shopId) {
       qb.andWhere('u.shopId = :sid', { sid: actor.shopId });
+      if (search?.trim()) {
+        const q = `%${search.trim().toLowerCase()}%`;
+        qb.andWhere(
+          '(LOWER(u.fullName) LIKE :q OR LOWER(u.userId) LIKE :q OR LOWER(COALESCE(u.email, \'\')) LIKE :q OR COALESCE(u.phone, \'\') LIKE :qRaw)',
+          { q, qRaw: `%${search.trim()}%` },
+        );
+      }
+      if (role?.trim()) {
+        const roleNum = Number(role);
+        if (Number.isFinite(roleNum)) {
+          qb.andWhere('u.role = :roleNum', { roleNum });
+        }
+      }
       const total = await qb.getCount();
       const items = await qb.skip(skip).take(l).getMany();
       return toPaginated(items, total, p, l);

@@ -35,12 +35,16 @@ export class UsersController {
   findAll(
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId?: string,
+    @Query('search') search?: string,
+    @Query('role') role?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.usersService.findAllForActor(
       user,
       shopId,
+      search,
+      role,
       page !== undefined ? Number(page) : undefined,
       limit !== undefined ? Number(limit) : undefined,
     );

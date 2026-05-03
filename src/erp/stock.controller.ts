@@ -33,11 +33,19 @@ export class StockController {
   list(
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId?: string,
+    @Query('search') search?: string,
+    @Query('product') product?: string,
+    @Query('threshold') threshold?: string,
+    @Query('onlyLow') onlyLow?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.stockService.listRows(
       resolveShopId(user, shopId),
+      search,
+      product,
+      threshold !== undefined ? Number(threshold) : undefined,
+      onlyLow === '1' || onlyLow === 'true',
       page !== undefined ? Number(page) : undefined,
       limit !== undefined ? Number(limit) : undefined,
     );

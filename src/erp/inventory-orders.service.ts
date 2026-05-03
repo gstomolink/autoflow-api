@@ -55,6 +55,10 @@ export class InventoryOrdersService {
   async list(
     shopId: string,
     source?: InventoryOrderSource,
+    status?: string,
+    month?: string,
+    supplierId?: number,
+    productSearch?: string,
     page?: number,
     limit?: number,
   ) {
@@ -65,6 +69,18 @@ export class InventoryOrdersService {
       .where('o.shopId IN (:...shopIds)', { shopIds });
     if (source) {
       countQb.andWhere('o.source = :source', { source });
+    }
+    if (status?.trim()) {
+      countQb.andWhere('o.status = :status', { status: status.trim() });
+    }
+    if (month?.trim()) {
+      countQb.andWhere(
+        "(DATE_FORMAT(o.expectedDeliveryDate, '%Y-%m') = :month OR DATE_FORMAT(o.createdAt, '%Y-%m') = :month)",
+        { month: month.trim() },
+      );
+    }
+    if (supplierId) {
+      countQb.andWhere('o.supplierId = :supplierId', { supplierId });
     }
     const total = await countQb.getCount();
 
@@ -77,6 +93,25 @@ export class InventoryOrdersService {
       .orderBy('o.createdAt', 'DESC');
     if (source) {
       q.andWhere('o.source = :source', { source });
+    }
+    if (status?.trim()) {
+      q.andWhere('o.status = :status', { status: status.trim() });
+    }
+    if (month?.trim()) {
+      q.andWhere(
+        "(DATE_FORMAT(o.expectedDeliveryDate, '%Y-%m') = :month OR DATE_FORMAT(o.createdAt, '%Y-%m') = :month)",
+        { month: month.trim() },
+      );
+    }
+    if (supplierId) {
+      q.andWhere('o.supplierId = :supplierId', { supplierId });
+    }
+    const searchQ = productSearch?.trim().toLowerCase();
+    if (searchQ) {
+      q.andWhere(
+        '(LOWER(o.orderNumber) LIKE :searchQ OR LOWER(p.name) LIKE :searchQ OR LOWER(p.sku) LIKE :searchQ)',
+        { searchQ: `%${searchQ}%` },
+      );
     }
     const items = await q.skip(skip).take(l).getMany();
     return toPaginated(items, total, p, l);

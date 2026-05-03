@@ -18,14 +18,22 @@ export class CategoriesService {
     private readonly productsRepository: Repository<ProductEntity>,
   ) {}
 
-  async findAll(parentShopId: string, page?: number, limit?: number) {
+  async findAll(
+    parentShopId: string,
+    search?: string,
+    page?: number,
+    limit?: number,
+  ) {
     const { page: p, limit: l, skip } = normalizePagination(page, limit);
-    const [rows, total] = await this.categoriesRepository.findAndCount({
-      where: { parentShopId },
-      order: { name: 'ASC' },
-      skip,
-      take: l,
-    });
+    const q = search?.trim().toLowerCase();
+    const qb = this.categoriesRepository
+      .createQueryBuilder('c')
+      .where('c.parentShopId = :parentShopId', { parentShopId });
+    if (q) {
+      qb.andWhere('LOWER(c.name) LIKE :q', { q: `%${q}%` });
+    }
+    qb.orderBy('c.name', 'ASC').skip(skip).take(l);
+    const [rows, total] = await qb.getManyAndCount();
     const ids = rows.map((c) => c.id);
     const countMap = new Map<number, number>();
     if (ids.length) {

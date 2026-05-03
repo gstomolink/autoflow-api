@@ -34,11 +34,13 @@ export class WarehousesController {
   findAll(
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId?: string,
+    @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.warehousesService.findAll(
       resolveShopId(user, shopId),
+      search,
       page !== undefined ? Number(page) : undefined,
       limit !== undefined ? Number(limit) : undefined,
     );

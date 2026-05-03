@@ -31,11 +31,19 @@ export class CustomerOrdersController {
   list(
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId?: string,
+    @Query('fromDate') fromDate?: string,
+    @Query('toDate') toDate?: string,
+    @Query('status') status?: string,
+    @Query('paymentType') paymentType?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
     return this.customerOrdersService.list(
       resolveShopId(user, shopId),
+      fromDate,
+      toDate,
+      status,
+      paymentType,
       page !== undefined ? Number(page) : undefined,
       limit !== undefined ? Number(limit) : undefined,
     );

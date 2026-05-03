@@ -39,6 +39,7 @@ export class SuppliersController {
   async findAll(
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId: string | undefined,
+    @Query('search') search?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -46,6 +47,7 @@ export class SuppliersController {
     const parentShopId = await this.shopsService.resolveParentShopId(resolvedShopId);
     return this.suppliersService.findAll(
       parentShopId,
+      search,
       page !== undefined ? Number(page) : undefined,
       limit !== undefined ? Number(limit) : undefined,
     );

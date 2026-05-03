@@ -41,6 +41,8 @@ export class ProductsController {
   async findAll(
     @CurrentUser() user: JwtPayload,
     @Query('shopId') shopId: string | undefined,
+    @Query('search') search?: string,
+    @Query('category') category?: string,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
   ) {
@@ -48,6 +50,8 @@ export class ProductsController {
     const parentShopId = await this.shopsService.resolveParentShopId(resolvedShopId);
     return this.productsService.findAll(
       parentShopId,
+      search,
+      category,
       page !== undefined ? Number(page) : undefined,
       limit !== undefined ? Number(limit) : undefined,
     );
