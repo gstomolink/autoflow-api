@@ -13,6 +13,7 @@ import {
 import { ProductEntity } from '../inventory/entities/product.entity';
 import { ShopEntity } from '../inventory/entities/shop.entity';
 import { CreateCustomerOrderDto } from './dto/create-customer-order.dto';
+import { UpdateCustomerOrderDto } from './dto/update-customer-order.dto';
 
 @Injectable()
 export class CustomerOrdersService {
@@ -141,5 +142,29 @@ export class CustomerOrdersService {
         relations: ['lines', 'lines.product'],
       });
     });
+  }
+
+  async update(shopId: string, id: number, dto: UpdateCustomerOrderDto) {
+    const order = await this.ordersRepository.findOne({ where: { id, shopId } });
+    if (!order) {
+      throw new NotFoundException();
+    }
+    if (dto.status !== undefined) order.status = dto.status;
+    if (dto.paymentStatus !== undefined) order.paymentStatus = dto.paymentStatus;
+    return this.ordersRepository.save(order);
+  }
+
+  async remove(shopId: string, id: number): Promise<void> {
+    const order = await this.ordersRepository.findOne({
+      where: { id, shopId },
+      relations: ['lines'],
+    });
+    if (!order) {
+      throw new NotFoundException();
+    }
+    if (order.lines && order.lines.length > 0) {
+      await this.linesRepository.remove(order.lines);
+    }
+    await this.ordersRepository.remove(order);
   }
 }

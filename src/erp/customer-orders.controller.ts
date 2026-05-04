@@ -1,9 +1,12 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
+  HttpCode,
   Param,
   ParseIntPipe,
+  Patch,
   Post,
   Query,
   UseGuards,
@@ -18,6 +21,7 @@ import { resolveShopId } from '../common/shop-scope';
 import type { JwtPayload } from '../auth/jwt-payload';
 import { CustomerOrdersService } from './customer-orders.service';
 import { CreateCustomerOrderDto } from './dto/create-customer-order.dto';
+import { UpdateCustomerOrderDto } from './dto/update-customer-order.dto';
 
 @ApiTags('customer-orders')
 @ApiBearerAuth()
@@ -70,6 +74,33 @@ export class CustomerOrdersController {
     return this.customerOrdersService.create(
       resolveShopId(user, shopId),
       dto,
+    );
+  }
+
+  @Patch(':id')
+  update(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId: string | undefined,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateCustomerOrderDto,
+  ) {
+    return this.customerOrdersService.update(
+      resolveShopId(user, shopId),
+      id,
+      dto,
+    );
+  }
+
+  @Delete(':id')
+  @HttpCode(204)
+  remove(
+    @CurrentUser() user: JwtPayload,
+    @Query('shopId') shopId: string | undefined,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.customerOrdersService.remove(
+      resolveShopId(user, shopId),
+      id,
     );
   }
 }
