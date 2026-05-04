@@ -18,10 +18,14 @@ export class DashboardsController {
 
   @Get('store-admin')
   @Roles(USER_ROLES.STORE_ADMIN, USER_ROLES.SUPER_ADMIN)
-  async getStoreAdminDashboard(@Query('shopId') shopId: string, @Req() req: any) {
-    // For local dev without shop scope middleware we should ensure we have shopId
+  async getStoreAdminDashboard(
+    @Query('shopId') shopId: string,
+    @Query('year') year: string,
+    @Req() req: any,
+  ) {
     const actualShopId = shopId || req.user?.shopId;
-    return this.dashboardsService.getStoreAdminDashboard(actualShopId, req.user);
+    const yearNum = year ? parseInt(year, 10) : new Date().getFullYear();
+    return this.dashboardsService.getStoreAdminDashboard(actualShopId, req.user, yearNum);
   }
 
   @Get('cashier')

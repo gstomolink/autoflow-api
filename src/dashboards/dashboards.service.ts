@@ -176,152 +176,108 @@ export class DashboardsService {
     };
   }
 
-  async getStoreAdminDashboard(shopId: string, user: UserEntity) {
+  async getStoreAdminDashboard(shopId: string, user: UserEntity, year: number) {
     if (!shopId) throw new Error('Shop ID is required');
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const currentYear = year || new Date().getFullYear();
 
-    // 1. Orders and Revenue Today
-    const todayOrders = await this.customerOrdersRepo
+    // 1. Last 30 days revenue & avg order value
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    thirtyDaysAgo.setHours(0, 0, 0, 0);
+
+    const recentOrders = await this.customerOrdersRepo
       .createQueryBuilder('o')
       .where('o.shopId = :shopId', { shopId })
-      .andWhere('o.createdAt >= :today', { today })
+      .andWhere('o.createdAt >= :from', { from: thirtyDaysAgo })
       .andWhere('o.status != :cancelled', { cancelled: 'cancelled' })
       .getMany();
 
-    const ordersToday = todayOrders.length;
-    let revenueToday = 0;
-    for (const order of todayOrders) {
-      revenueToday += parseFloat(order.totalAmount || '0');
+    let totalRevenue = 0;
+    for (const order of recentOrders) {
+      totalRevenue += parseFloat(order.totalAmount || '0');
+    }
+    const avgOrderValue =
+      recentOrders.length > 0 ? totalRevenue / recentOrders.length : 0;
+
+    // 2. Total Shops & Total Users (global counts)
+    const totalShops = await this.shopsRepo.count();
+    const totalUsers = await this.usersRepo.count();
+
+    // 3. Monthly Inventory Orders chart for the selected year
+    const monthNames = [
+      'January', 'February', 'March', 'April', 'May', 'June',
+      'July', 'August', 'September', 'October', 'November', 'December',
+    ];
+    const yearStart = new Date(currentYear, 0, 1);
+    const yearEnd = new Date(currentYear + 1, 0, 1);
+
+    const invOrdersForYear = await this.inventoryOrdersRepo
+      .createQueryBuilder('io')
+      .where('io.shopId = :shopId', { shopId })
+      .andWhere('io.createdAt >= :yearStart', { yearStart })
+      .andWhere('io.createdAt < :yearEnd', { yearEnd })
+      .select(['io.createdAt'])
+      .getMany();
+
+    const monthlyCounts = Array(12).fill(0);
+    for (const order of invOrdersForYear) {
+      const month = new Date(order.createdAt).getMonth();
+      monthlyCounts[month]++;
     }
 
-    // 2. Pending Orders
-    const pendingOrdersCount = await this.customerOrdersRepo.count({
-      where: {
-        shopId,
-        status: In(['pending', 'processing']),
-      },
-    });
+    const inventoryOrdersChart = monthNames.map((month, i) => ({
+      month,
+      count: monthlyCounts[i],
+    }));
 
-    // 3. Live Order Activity
-    const recentOrders = await this.customerOrdersRepo.find({
-      where: { shopId },
-      order: { createdAt: 'DESC' },
-      take: 4,
-      relations: ['lines', 'lines.product'],
-    });
-
-    const liveOrderActivity = recentOrders.map(o => {
-      const itemsStr = o.lines?.map(l => `${l.quantity}x ${l.product?.name || 'Item'}`).join(', ') || 'No items';
-      let minsAgo = Math.floor((new Date().getTime() - new Date(o.createdAt).getTime()) / 60000);
-      if (minsAgo < 0) minsAgo = 0;
-      
-      return {
-        id: o.id,
-        orderNumber: o.orderNumber,
-        status: o.status,
-        items: itemsStr,
-        time: minsAgo === 0 ? 'Just now' : `${minsAgo} mins ago`
-      };
-    });
-
-    // 4. Low Stock Alerts
-    // Find warehouses for this shop
-    const warehouses = await this.warehousesRepo.find({ where: { shopId } });
-    const warehouseIds = warehouses.map(w => w.id);
-    
-    let lowStockItems: { name: string, stock: number }[] = [];
-    if (warehouseIds.length > 0) {
-      const stocks = await this.inventoryStockRepo.find({
-        where: { warehouseId: In(warehouseIds) },
-        relations: ['product'],
-      });
-      // Mocking safety stock as 10 since it's not in ProductEntity right now, wait let me check ProductEntity.
-      // I'll just assume threshold is 10 for simplicity or return ones with stock < 10.
-      lowStockItems = stocks
-        .filter(s => s.quantityOnHand < 10)
-        .map(s => ({
-          name: s.product?.name || 'Unknown',
-          stock: s.quantityOnHand,
-        }))
-        .slice(0, 5);
-    }
-
-    // 5. Top Products
-    // Aggregate from order lines
+    // 4. Top Products (all time for this shop, non-cancelled)
     const topLines = await this.customerOrderLinesRepo
       .createQueryBuilder('l')
       .innerJoin('l.order', 'o')
       .innerJoin('l.product', 'p')
       .where('o.shopId = :shopId', { shopId })
+      .andWhere('o.status != :cancelled', { cancelled: 'cancelled' })
       .select(['p.name as name', 'SUM(l.quantity) as sales'])
       .groupBy('p.id')
       .orderBy('sales', 'DESC')
-      .limit(4)
+      .limit(5)
       .getRawMany();
 
-    const topProducts = topLines.map(t => ({
+    const topProducts = topLines.map((t) => ({
       name: t.name,
       sales: parseInt(t.sales, 10),
     }));
 
-    // 6. Shift and operations overview
-    // Calculate completed orders avg prep time (proxy using createdAt vs updatedAt)
-    const completedOrders = await this.customerOrdersRepo.find({
-      where: { shopId, status: In(['shipped', 'delivered']) },
-    });
-    let totalPrepMins = 0;
-    for (const o of completedOrders) {
-      const mins = (new Date(o.updatedAt).getTime() - new Date(o.createdAt).getTime()) / 60000;
-      totalPrepMins += mins > 0 ? mins : 0;
+    // 5. Low Stock Alerts
+    const warehouses = await this.warehousesRepo.find({ where: { shopId } });
+    const warehouseIds = warehouses.map((w) => w.id);
+
+    let lowStock: { name: string; stock: number }[] = [];
+    if (warehouseIds.length > 0) {
+      const stocks = await this.inventoryStockRepo.find({
+        where: { warehouseId: In(warehouseIds) },
+        relations: ['product'],
+      });
+      lowStock = stocks
+        .filter((s) => s.quantityOnHand < 10)
+        .map((s) => ({
+          name: s.product?.name || 'Unknown',
+          stock: s.quantityOnHand,
+        }))
+        .slice(0, 6);
     }
-    const avgPrepTime = completedOrders.length > 0 ? Math.floor(totalPrepMins / completedOrders.length) : 0;
-
-    const staffOnShift = await this.usersRepo.count({
-      where: { shopId, role: USER_ROLES.STORE_STAFF },
-    });
-
-    const pendingDeliveries = await this.inventoryOrdersRepo.count({
-      where: { shopId, status: In(['draft', 'submitted', 'partially_received']) },
-    });
-
-    // Mock for now:
-    const openingBalance = 15000;
-    const cashSales = revenueToday; // Assumed all cash due to lack of payment method
-    const cardSales = 0;
-    const wastage = 0;
-    
-    // Find manager on duty
-    const manager = await this.usersRepo.findOne({
-      where: { shopId, role: USER_ROLES.STORE_ADMIN },
-    });
-
-    const cashiers = await this.usersRepo.count({
-      where: { shopId, staffType: STORE_STAFF_TYPES.CASHIER },
-    });
 
     return {
-      daily: {
-        ordersToday,
-        revenueToday,
-        avgPrepTime: `${avgPrepTime} mins`,
-        staffOnShift: `${staffOnShift} Active`,
-        pendingOrders: pendingOrdersCount,
+      metrics: {
+        totalRevenue,
+        avgOrderValue,
+        totalShops,
+        totalUsers,
       },
-      liveOrders: liveOrderActivity,
-      lowStock: lowStockItems,
+      inventoryOrdersChart,
       topProducts,
-      shift: {
-        openingBalance,
-        cashSales,
-        cardSales,
-        pendingDeliveries,
-        wastage,
-        managerName: manager?.fullName || 'Not assigned',
-        kitchenStaff: staffOnShift - cashiers,
-        cashiers,
-      }
+      lowStock,
     };
   }
 
