@@ -13,6 +13,7 @@ import { inventoryEntities } from './inventory/entities';
 import { ErpModule } from './erp/erp.module';
 import { UserEntity } from './users/entities/user.entity';
 import { UsersModule } from './users/users.module';
+import { DashboardsModule } from './dashboards/dashboards.module';
 
 @Module({
   imports: [
@@ -55,6 +56,7 @@ import { UsersModule } from './users/users.module';
     AuthModule,
     UsersModule,
     ErpModule,
+    DashboardsModule,
   ],
   controllers: [AppController],
   providers: [
